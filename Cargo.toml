@@ -1,0 +1,10 @@
+[package]
+name = "sonik"
+version = "0.1.0"
+authors = ["adcrn <9167686+adcrn@users.noreply.github.com>"]
+edition = "2018"
+
+[dependencies]
+tui = "0.5"
+termion = "1.5"
+failure = "*"
