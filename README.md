@@ -15,3 +15,4 @@ _sonik_ is a console music player that does its best to get out of your way. It 
 - [ ] shuffle algorithm
 - [ ] repeat track/playlist/album
 - [ ] music database
+- [ ] search functionality
