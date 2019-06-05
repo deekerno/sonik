@@ -1,6 +1,10 @@
 mod util;
 
+use std::fs;
 use std::io;
+
+use rodio::Sink;
+
 use tui::{Frame, Terminal};
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
@@ -29,6 +33,11 @@ fn draw_browse_tab(f: &mut Frame<TermionBackend>, app: &App, area: Rect) {
 }*/
 
 fn main() -> Result<(), failure::Error> {
+
+    // Create the sink for the audio output device
+    let sink = Sink::new(&rodio::default_output_device()
+                         .expect("Error: No output device available."));
+
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
@@ -93,7 +102,26 @@ fn main() -> Result<(), failure::Error> {
                     // Clear buffer so command line prompt is shown correctly
                     terminal.clear()?;
                     break;
+                },
+                Key::Char('p') => {
+                    if sink.is_paused() {
+                        sink.play();
+                    } else {
+                        sink.pause();
+                    }
                 }
+                Key::Char('s') => {
+                    // Turn on shuffle
+                },
+                Key::Char('r') => {
+                    // Turn on repeat
+                },
+                Key::Char('>') => {
+                    // Skip to next song
+                },
+                Key::Char('<') => {
+                    // Skip to previous song
+                },
                 Key::Right => app.tabs.next(),
                 Key::Left => app.tabs.previous(),
                 _ => {}
