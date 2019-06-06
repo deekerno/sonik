@@ -1,7 +1,11 @@
 extern crate rusqlite;
+extern crate walkdir;
+
+use std::path::Path;
 
 use rusqlite::{Connection, Result};
 use rusqlite::NO_PARAMS;
+use walkdir::WalkDir;
 
 use database::{Track, SearchQuery};
 
@@ -22,12 +26,41 @@ pub fn create_database(conn: &Connection) {
     )?;
 }
 
-pub fn update_database(tracks: Vec<Track>) {
-    // This will take ownership of the vector
-    // Take each element of the vector and call add_track
+fn is_music(entry: &DirEntry) -> bool {
+    
+    if entry.is_dir() {
+        return false;
+    }
+    
+    // If the filename isn't a suitable audio format, return false
+    entry.file_name()
+        .to_str()
+        .map(|e| e.ends_with((".mp3", ".flac", ".ogg")))
+        .unwrap_or(false)
 }
 
-pub fn add_track(conn: &Connection, track: &Track) {
+pub fn update_database(conn: &Connection, music_folder: Path) -> Result<()> {
+
+    // Walk through the music directory and add paths for each track
+    let mut track_paths: Vec<Path>::new();
+    for entry in WalkDir::new(music_folder).into_iter().filter_entry(|e| is_music(e)) {
+        track_paths.append(entry?.path());            
+    }
+
+    // Create a vector of track structs that contain ID3 information
+    let tracks: Vec<Track> = track_paths.iter()
+                            .map(|p| Track::new(p))
+                            .collect();
+
+    // Add each track to the database
+    for track in &tracks {
+        add_track(conn, track);
+    }
+
+    Ok(())
+}
+
+pub fn add_track(conn: &Connection, track: &Track) -> Result<()> {
     conn.excute(
         "insert or replace into tracks
         (
@@ -51,6 +84,8 @@ pub fn add_track(conn: &Connection, track: &Track) {
             &track.duration,
         ]
     )?;
+
+    Ok(())
 }
 
 pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
@@ -67,6 +102,7 @@ pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
      *  - !al - album
      * */
 
+    // Create a SQL query using the search terms given by the user
     let search_query = SearchQuery::new(query);
     let mut stmt = conn.prepare(search_query.to_sql_query())?;
     
@@ -83,7 +119,7 @@ pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
                     track_num: row.get(6)?,
                     duration: row.get(7)?,
                 }
-                )
+            )
         )?;
 
     Ok(tracks)

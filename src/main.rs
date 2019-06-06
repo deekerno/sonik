@@ -1,16 +1,17 @@
 mod util;
+pub mod database;
+pub mod application;
 
-use std::fs;
 use std::io;
 
 use rodio::Sink;
 
-use tui::{Frame, Terminal};
+use tui::Terminal;
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
 use termion::event::Key;
 use tui::widgets::{Widget, Block, Borders, Tabs};
-use tui::layout::{Layout, Constraint, Direction, Rect};
+use tui::layout::{Layout, Constraint, Direction};
 use tui::style::{Color, Style};
 
 use crate::util::event::{Event, Events};
@@ -116,6 +117,9 @@ fn main() -> Result<(), failure::Error> {
                 Key::Char('r') => {
                     // Turn on repeat
                 },
+                Key::Char('u') => {
+                    // update database
+                }
                 Key::Char('>') => {
                     // Skip to next song
                 },

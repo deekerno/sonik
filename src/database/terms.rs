@@ -18,8 +18,8 @@ impl Term {
                 "title" => Some(Term::Title(elements[1].into())),
                 "album" => Some(Term::Album(elements[1].into())),
                 "artist" => Some(Term::Artist(elements[1].into())),
-                "year_less" => Some(Term::YearLess(elements[1].into())),
-                "year_greater" => Some(Term::YearGreater(elements[1].into())),
+                "year_less" => Some(Term::YearLess(elements[1].parse::<i32>().unwrap())),
+                "year_greater" => Some(Term::YearGreater(elements[1].parse::<i32>().unwrap())),
                 _ => return None
             }
         }
@@ -27,12 +27,12 @@ impl Term {
 
     pub fn to_sql_query(self) -> String {
         match self {
-            Term::Any(x) => format!("title like '%{}%' or album like '%{}%' or artist like '%{}%' or albumartists like '%{}%'", x, x, x, x)
-            Term::Title(x) => format!("title like '%{}%'", x)
-            Term::Album(x) => format!("album like '%{}%'", x)
-            Term::Artist(x) => format!("artist like '%{}%' or albumartists like '%{}%'", x, x)
-            Term::YearLess(x) => format!("year <= {}", x)
-            Term::YearGreater(x) => format!("year >= {}", x)
+            Term::Any(x) => format!("title like '%{}%' or album like '%{}%' or artist like '%{}%' or albumartists like '%{}%'", x, x, x, x),
+            Term::Title(x) => format!("title like '%{}%'", x),
+            Term::Album(x) => format!("album like '%{}%'", x),
+            Term::Artist(x) => format!("artist like '%{}%' or albumartists like '%{}%'", x, x),
+            Term::YearLess(x) => format!("year <= {}", x),
+            Term::YearGreater(x) => format!("year >= {}", x),
         }
     }
 }
@@ -55,7 +55,7 @@ impl SearchQuery {
         // If there's anything at all, start chaining terms together in SQL
         if !self.terms.is_empty() {
             sql_query.push_str(" where ");
-            sql.query.push_str(&self.terms.into_iter()
+            sql_query.push_str(&self.terms.into_iter()
                                .map(|x| x.to_sql_query())
                                .collect::<Vec<String>>()
                                .join(" AND  "));
