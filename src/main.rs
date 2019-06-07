@@ -4,8 +4,6 @@ pub mod application;
 
 use std::io;
 
-use rodio::Sink;
-
 use tui::Terminal;
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
@@ -16,28 +14,13 @@ use tui::style::{Color, Style};
 
 use crate::util::event::{Event, Events};
 use crate::util::App;
-
-/*fn draw_queue_tab(f: &mut Frame<TermionBackend>, app: &App, area: Rect) {
-    //
-}
-
-fn draw_library_tab(f: &mut Frame<TermionBackend>, app: &App, area: Rect) {
-    //
-}
-
-fn draw_search_tab(f: &mut Frame<TermionBackend>, app: &App, area: Rect) {
-    //
-}
-
-fn draw_browse_tab(f: &mut Frame<TermionBackend>, app: &App, area: Rect) {
-    //
-}*/
+use crate::application::queue::SonikQueue;
 
 fn main() -> Result<(), failure::Error> {
 
     // Create the sink for the audio output device
-    let sink = Sink::new(&rodio::default_output_device()
-                         .expect("Error: No output device available."));
+    let device = rodio::default_output_device().expect("No audio output device found");
+    let queue = SonikQueue::new();
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
@@ -105,11 +88,11 @@ fn main() -> Result<(), failure::Error> {
                     break;
                 },
                 Key::Char('p') => {
-                    if sink.is_paused() {
+                /*    if sink.is_paused() {
                         sink.play();
                     } else {
                         sink.pause();
-                    }
+                    }*/
                 }
                 Key::Char('s') => {
                     // Turn on shuffle
