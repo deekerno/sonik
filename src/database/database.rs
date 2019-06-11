@@ -2,14 +2,16 @@ extern crate rusqlite;
 extern crate walkdir;
 
 use std::path::Path;
+use std::fs;
 
 use rusqlite::{Connection, Result};
 use rusqlite::NO_PARAMS;
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
 
-use database::{Track, SearchQuery};
+use crate::database::track::Track;
+use crate::database::terms::SearchQuery;
 
-pub fn create_database(conn: &Connection) {
+pub fn create_database(conn: &Connection) -> Result<()> {
     conn.execute(
         "create table if not exists tracks 
         (
@@ -24,66 +26,69 @@ pub fn create_database(conn: &Connection) {
         )",
         NO_PARAMS,
     )?;
+
+    Ok(())
 }
 
 fn is_music(entry: &DirEntry) -> bool {
     
-    if entry.is_dir() {
+    let metadata = fs::metadata(entry.path()).unwrap();
+    if metadata.is_dir() {
         return false;
     }
     
     // If the filename isn't a suitable audio format, return false
     entry.file_name()
         .to_str()
-        .map(|e| e.ends_with((".mp3", ".flac", ".ogg")))
+        .map(|e| e.ends_with(".mp3") || e.ends_with(".flac") || e.ends_with(".ogg"))
         .unwrap_or(false)
 }
 
-pub fn update_database(conn: &Connection, music_folder: Path) -> Result<()> {
+pub fn update_database(conn: &Connection, music_folder: &Path) -> Result<()> {
 
     // Walk through the music directory and add paths for each track
-    let mut track_paths: Vec<Path>::new();
-    for entry in WalkDir::new(music_folder).into_iter().filter_entry(|e| is_music(e)) {
-        track_paths.append(entry?.path());            
-    }
-
+    let entries = WalkDir::new(music_folder)
+                    .into_iter()
+                    .filter_entry(|e| is_music(e))
+                    .filter_map(|v| v.ok());
+   
     // Create a vector of track structs that contain ID3 information
-    let tracks: Vec<Track> = track_paths.iter()
-                            .map(|p| Track::new(p))
+    let tracks: Vec<Track> = entries
+                            .map(|e| Track::new(e.path().to_path_buf()).unwrap())
                             .collect();
 
-    // Add each track to the database
-    for track in &tracks {
-        add_track(conn, track);
-    }
+    add_tracks(conn, tracks)?;
 
     Ok(())
 }
 
-pub fn add_track(conn: &Connection, track: &Track) -> Result<()> {
-    conn.excute(
-        "insert or replace into tracks
-        (
-            filepath,
-            title,
-            artist,
-            albumartists,
-            album,
-            year,
-            tracknum,
-            duration
-        ) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-        &[
-            &track.file_path.to_string(),
-            &track.title,
-            &track.artist,
-            &track.album_artist,
-            &track.album,
-            &track.year,
-            &track.track_num,
-            &track.duration,
-        ]
-    )?;
+pub fn add_tracks(conn: &Connection, tracks: Vec<Track>) -> Result<()> {
+    for track in tracks {
+    
+        conn.execute(
+            "insert or replace into tracks
+            (
+                filepath,
+                title,
+                artist,
+                albumartists,
+                album,
+                year,
+                tracknum,
+                duration
+            ) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            &[
+                &track.file_path,
+                &track.title,
+                &track.artist,
+                &track.album_artist,
+                &track.album,
+                &track.year.to_string(),
+                &track.track_num.to_string(),
+                &track.duration.to_string(),
+            ]
+        )?;
+    }
 
     Ok(())
 }
@@ -103,10 +108,10 @@ pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
      * */
 
     // Create a SQL query using the search terms given by the user
-    let search_query = SearchQuery::new(query);
-    let mut stmt = conn.prepare(search_query.to_sql_query())?;
+    let search_query = SearchQuery::new(&query);
+    let mut stmt = conn.prepare(&search_query.to_sql_query())?;
     
-    let tracks = stmt
+    let results = stmt
         .query_map(NO_PARAMS, |row|
             Ok(
                 Track {
@@ -121,6 +126,12 @@ pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
                 }
             )
         )?;
+
+    let mut tracks: Vec<Track> = Vec::new();
+
+    for result in results {
+        tracks.push(result.unwrap());
+    }
 
     Ok(tracks)
 }

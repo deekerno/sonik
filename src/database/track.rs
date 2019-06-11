@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use id3::Tag;
 
 pub struct Track {
-    pub file_path: PathBuf,
+    pub file_path: String,
     pub title: String,
     pub artist: String,
     pub album_artist: String,
@@ -19,7 +19,7 @@ impl Track {
         
         Ok(
             Track {
-                file_path: path,
+                file_path: path.as_path().to_string_lossy().to_string(),
                 title: tag.title().unwrap().to_string(),
                 artist: tag.artist().unwrap().to_string(),
                 album_artist: tag.album_artist().unwrap().to_string(),

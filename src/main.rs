@@ -23,7 +23,8 @@ fn main() -> Result<(), failure::Error> {
     // Load the configuration for the program 
     // and attempt to connect to database
     let config = Config::get_config().expect("Could not get or create configuration");
-    let conn = Connection::open(config.database_path);
+    let conn = Connection::open(config.database_path)?;
+    database::database::create_database(&conn)?;
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
@@ -46,8 +47,7 @@ fn main() -> Result<(), failure::Error> {
                 .constraints(
                     [
                         Constraint::Percentage(5),
-                        Constraint::Percentage(90),
-                        Constraint::Percentage(5)
+                        Constraint::Percentage(95),
                     ].as_ref()
                 )
                 .split(f.size());
@@ -61,10 +61,6 @@ fn main() -> Result<(), failure::Error> {
                 .style(Style::default().fg(Color::Cyan))
                 .highlight_style(Style::default().fg(Color::Yellow))
                 .render(&mut f, chunks[0]);
-            Block::default()
-                .title("now playing")
-                .borders(Borders::ALL)
-                .render(&mut f, chunks[2]);
             match app.tabs.index {
                 0 => Block::default()
                     .title("queue")
