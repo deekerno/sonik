@@ -4,6 +4,7 @@ pub mod application;
 
 use std::io;
 
+use rusqlite::Connection;
 use tui::Terminal;
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
@@ -15,8 +16,14 @@ use tui::style::{Color, Style};
 use crate::util::event::{Event, Events};
 use crate::util::App;
 use crate::application::queue::SonikQueue;
+use crate::application::config::Config;
 
 fn main() -> Result<(), failure::Error> {
+
+    // Load the configuration for the program 
+    // and attempt to connect to database
+    let config = Config::get_config().expect("Could not get or create configuration");
+    let conn = Connection::open(config.database_path);
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
@@ -93,7 +100,7 @@ fn main() -> Result<(), failure::Error> {
                     } else {
                         sink.pause();
                     }*/
-                }
+                },
                 Key::Char('s') => {
                     // Turn on shuffle
                 },
@@ -108,6 +115,15 @@ fn main() -> Result<(), failure::Error> {
                 },
                 Key::Char('<') => {
                     // Skip to previous song
+                },
+                Key::Char('a') => {
+                    // Add track to queue
+                },
+                Key::Char('c') => {
+                    // Clear the queue  
+                },
+                Key::Char('n') => {
+                    // Add track to front of queue
                 },
                 Key::Right => app.tabs.next(),
                 Key::Left => app.tabs.previous(),

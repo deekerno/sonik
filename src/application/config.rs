@@ -1,8 +1,6 @@
-use std::default::Default;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use app_dirs2::*;
 use dirs::home_dir;
 use serde_derive::{Serialize, Deserialize};
 use toml;
@@ -10,38 +8,59 @@ use toml;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub music_folder: String,
+    pub data_folder: String,
+    pub database_path: String,
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        let mut home_directory = home_dir().unwrap();
-        home_directory.push("Music");
+impl Config {
+    pub fn default() -> Config {
+        
+        // This bit could probably be optimized  
+        let mut music_location = home_dir().unwrap();
+        music_location.push("Music");
+
+        let mut data_folder = home_dir().unwrap();
+        data_folder.push(".sonik");
+        
+        let mut database_path = home_dir().unwrap();
+        database_path.push(".sonik");
+        database_path.push("tracks.db");
+
         Config {
-            music_folder: home_directory.to_str().unwrap().to_owned(),
+            music_folder: music_location.to_str().unwrap().to_owned(),
+            data_folder: data_folder.to_str().unwrap().to_owned(),
+            database_path: database_path.to_str().unwrap().to_owned(),
         }
+    }
+
+    pub fn get_config() -> Result<Config, ()> {
+        
+        // Set path for configuration file
+        let mut config_path: PathBuf = home_dir().unwrap();
+        config_path.push(".sonik");
+        config_path.push("config.toml");
+
+        // Return an error if unable to write a new configuration file
+        if !config_path.exists() && write_default_config(config_path.as_path()).is_none() {
+            println!("Error: Could not write default config file");
+            return Err(());
+        }
+
+        // Create the configuration
+        let config_string = fs::read_to_string(&config_path).unwrap();
+        let config: Config = toml::from_str(&config_string).unwrap();
+        
+        Ok(config)
     }
 }
 
 fn write_default_config(path: &Path) -> Option<()> {
-    let default_config = toml::to_string(&Config::default()).unwrap();
-    fs::write(path.to_string_lossy().into_owned(), default_config).ok()
-}
-
-pub fn get_config() -> Result<Config, ()> {
-    let mut config_path: PathBuf = home_dir().unwrap();
-    config_path.push(".sonik");
-    config_path.push("config.toml");
-    if !config_path.exists() && write_default_config(config_path.as_path()).is_none() {
-        println!("Error: Could not write default config file");
-        return Err(());
-    }
-
-    let config_string = fs::read_to_string(&config_path).unwrap();
-    let config = toml::from_str(&config_string);
     
-    if let Ok(config) = config {
-        Ok(config)
-    } else {
-        Err(())
-    }
+    // Get the default config and create the necessary folders
+    let default_config = Config::default();
+    fs::create_dir_all(default_config.data_folder).unwrap();
+
+    // Save the configuration info to a TOML file in the data folder
+    let config_as_str = toml::to_string(&Config::default()).unwrap();
+    fs::write(path.to_string_lossy().into_owned(), config_as_str).ok()
 }

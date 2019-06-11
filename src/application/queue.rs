@@ -21,6 +21,11 @@ impl SonikQueue {
         self.tracks.push(track);
     }
 
+    pub fn add_to_front(&mut self, track: Track) {
+        self.total_time += &track.duration;
+        self.tracks.insert(0, track);
+    }
+
     pub fn clear(&mut self) {
         self.tracks.clear();
         self.total_time = 0;
