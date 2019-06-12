@@ -13,7 +13,7 @@ _sonik_ is a console music player that does its best to get out of your way. It 
 - [ ] file browser view
 - [x] play/pause/stop major audio formats
 - [ ] seek during playback
-- [ ] shuffle algorithm
+- [x] shuffle algorithm
 - [ ] repeat track/playlist/album
 - [x] music database
 - [x] search functionality

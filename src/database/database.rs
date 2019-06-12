@@ -1,12 +1,10 @@
 extern crate rusqlite;
-extern crate walkdir;
 
-use std::path::Path;
 use std::fs;
 
+use ignore::{DirEntry, Walk};
 use rusqlite::{Connection, Result};
 use rusqlite::NO_PARAMS;
-use walkdir::{DirEntry, WalkDir};
 
 use crate::database::track::Track;
 use crate::database::terms::SearchQuery;
@@ -36,35 +34,51 @@ fn is_music(entry: &DirEntry) -> bool {
     if metadata.is_dir() {
         return false;
     }
-    
+
     // If the filename isn't a suitable audio format, return false
-    entry.file_name()
-        .to_str()
-        .map(|e| e.ends_with(".mp3") || e.ends_with(".flac") || e.ends_with(".ogg"))
-        .unwrap_or(false)
+    if let Some(extension) = entry.path().extension() {
+        match extension.to_str() {
+            Some("mp3") => return true,
+            Some("flac") => return true,
+            Some("ogg") => return true,
+            _ => return false,
+        };
+    } else {
+        return false;
+    }
 }
 
-pub fn update_database(conn: &Connection, music_folder: &Path) -> Result<()> {
+pub fn update_database(conn: &Connection, music_folder: &String) -> Result<()> {
+
+    //println!("Updating from: {}", music_folder);
+
+    let mut tracks: Vec<Track> = Vec::new();
 
     // Walk through the music directory and add paths for each track
-    let entries = WalkDir::new(music_folder)
-                    .into_iter()
-                    .filter_entry(|e| is_music(e))
-                    .filter_map(|v| v.ok());
-   
-    // Create a vector of track structs that contain ID3 information
-    let tracks: Vec<Track> = entries
-                            .map(|e| Track::new(e.path().to_path_buf()).unwrap())
-                            .collect();
+    for result in Walk::new(music_folder) {
+        match result {
+            Ok(entry) => if is_music(&entry) {
+                let track = Track::new(entry.into_path());
+                match track.ok() {
+                    Some(t) => tracks.push(t),
+                    _ => (),
+                }
+            },
+            _ => (),
+        }
+    }
 
+    //println!("Number of tracks: {}", &tracks.len());
+   
     add_tracks(conn, tracks)?;
 
     Ok(())
 }
 
 pub fn add_tracks(conn: &Connection, tracks: Vec<Track>) -> Result<()> {
-    for track in tracks {
     
+    // Add each track's info to the database
+    for track in tracks { 
         conn.execute(
             "insert or replace into tracks
             (
@@ -89,6 +103,8 @@ pub fn add_tracks(conn: &Connection, tracks: Vec<Track>) -> Result<()> {
             ]
         )?;
     }
+
+    //println!("Update complete");
 
     Ok(())
 }

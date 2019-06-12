@@ -104,7 +104,7 @@ fn main() -> Result<(), failure::Error> {
                     // Turn on repeat
                 },
                 Key::Char('u') => {
-                    // update database
+                    database::database::update_database(&conn, &config.music_folder)?;
                 }
                 Key::Char('>') => {
                     // Skip to next song

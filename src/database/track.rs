@@ -15,18 +15,63 @@ pub struct Track {
 
 impl Track {
     pub fn new(path: PathBuf) -> Result<Track, ()> {
-        let tag = Tag::read_from_path(&path).unwrap();
-        
+
+        // Some paths aren't UTF-8 compliant
+        // For now, we will ignore these tracks
+        let tag = Tag::read_from_path(&path);
+        match tag.ok() {
+            None => return Err(()),
+            _ => (),
+        }
+       
+        // Anything that gets to this stage has a safe path
+        let safe_tag = Tag::read_from_path(&path).unwrap();
+
+        let mut title: String = "".to_string();
+        if let Some(s) = safe_tag.title() {
+            title = s.to_string();
+        }
+
+        let mut artist: String = "".to_string();
+        if let Some(s) = safe_tag.artist() {
+            artist = s.to_string();
+        }
+
+        let mut album: String = "".to_string();
+        if let Some(s) = safe_tag.album() {
+            album = s.to_string();
+        }
+
+        let mut album_artist: String = "".to_string();
+        if let Some(s) = safe_tag.album_artist() {
+            album_artist = s.to_string();
+        }
+
+        let mut year: i32 = 0;
+        if let Some(x) = safe_tag.year() {
+            year = x;
+        }
+
+        let mut track_num: u32 = 0;
+        if let Some(x) = safe_tag.track() {
+            track_num = x;
+        }
+
+        let mut duration: u32 = 0;
+        if let Some(x) = safe_tag.duration() {
+            duration = x;
+        }
+
         Ok(
             Track {
                 file_path: path.as_path().to_string_lossy().to_string(),
-                title: tag.title().unwrap().to_string(),
-                artist: tag.artist().unwrap().to_string(),
-                album_artist: tag.album_artist().unwrap().to_string(),
-                album: tag.album().unwrap().to_string(),
-                year: tag.year().unwrap(),
-                track_num: tag.track().unwrap(),
-                duration: tag.duration().unwrap(),
+                title: title,
+                artist: artist,
+                album_artist: album_artist,
+                album: album,
+                year: year,
+                track_num: track_num,
+                duration: duration,
             }
         )
     }
