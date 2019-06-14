@@ -2,8 +2,8 @@ use tui::backend::Backend;
 use tui::Terminal;
 use termion::raw::IntoRawMode;
 use termion::event::Key;
-use tui::widgets::{Widget, Block, Borders, Tabs, Text, List};
-use tui::layout::{Layout, Constraint, Direction, Rect};
+use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph};
+use tui::layout::{Layout, Constraint, Direction, Rect, Alignment};
 use tui::style::{Color, Style};
 use tui::Frame;
 
@@ -77,16 +77,14 @@ where
     let chunks = Layout::default()
         .constraints(
             [
-                Constraint::Ratio(1, 4),
-                Constraint::Ratio(3, 4)
+                Constraint::Ratio(1,10),
+                Constraint::Ratio(9,10)
             ].as_ref()
         )
         .direction(Direction::Vertical)
         .split(area);
 
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, chunks[0]);
+    draw_search_input(f, chunks[0]);
     Block::default()
         .borders(Borders::ALL)
         .render(f, chunks[1]);
@@ -97,7 +95,42 @@ fn draw_search_input<B>(f: &mut Frame<B>, area: Rect)
 where
     B: Backend,
 {
-    //
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(1)
+        .constraints(
+            [
+                Constraint::Ratio(1,4),
+                Constraint::Ratio(1,4),
+                Constraint::Ratio(1,4),
+                Constraint::Ratio(1,4),
+            ].as_ref()
+        )
+        .split(area);
+
+    let text = [
+        Text::styled("Available Terms:\n", Style::default().fg(Color::Yellow)),
+        Text::styled("title, album, artist\nyear_less, year_greater", Style::default().fg(Color::Yellow))
+    ];
+    
+    // Enclosing border
+    Block::default()
+        .borders(Borders::ALL)
+        .render(f, area);
+
+    // Term explanations
+    Paragraph::new(text.iter())
+        .block(Block::default().borders(Borders::NONE))
+        .alignment(Alignment::Center)
+        .wrap(true)
+        .render(f, chunks[1]);
+    
+    // Input box
+    Block::default()
+        .borders(Borders::ALL)
+        .render(f, chunks[2]);
+
+    // unhide terminal cursor here and set it to box start
 }
 
 fn draw_search_results<B>(f: &mut Frame<B>, area: Rect)
