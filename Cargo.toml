@@ -19,3 +19,8 @@ serde_derive = "*"
 serde = "*"
 toml = "*"
 ignore = "*"
+
+[dependencies.cursive]
+version = "*"
+default-features = false
+features = ["termion-backend"]

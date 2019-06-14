@@ -1,6 +1,7 @@
 mod util;
 pub mod database;
 pub mod application;
+pub mod ui;
 
 use std::io;
 
@@ -15,7 +16,6 @@ use tui::style::{Color, Style};
 
 use crate::util::event::{Event, Events};
 use crate::util::App;
-use crate::application::queue::SonikQueue;
 use crate::application::config::Config;
 
 fn main() -> Result<(), failure::Error> {
@@ -28,7 +28,6 @@ fn main() -> Result<(), failure::Error> {
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
-    let queue = SonikQueue::new();
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
@@ -54,30 +53,12 @@ fn main() -> Result<(), failure::Error> {
             Block::default()
                 .style(Style::default().bg(Color::Black))
                 .render(&mut f, size);
-            Tabs::default()
-                .block(Block::default().borders(Borders::ALL).title("tabs"))
-                .titles(&app.tabs.titles)
-                .select(app.tabs.index)
-                .style(Style::default().fg(Color::Cyan))
-                .highlight_style(Style::default().fg(Color::Yellow))
-                .render(&mut f, chunks[0]);
+            ui::screens::draw_top_bar(&mut f, &app, chunks[0]);
             match app.tabs.index {
-                0 => Block::default()
-                    .title("queue")
-                    .borders(Borders::ALL)
-                    .render(&mut f, chunks[1]),
-                1 => Block::default()
-                    .title("library")
-                    .borders(Borders::ALL)
-                    .render(&mut f, chunks[1]),
-                2 => Block::default()
-                    .title("search")
-                    .borders(Borders::ALL)
-                    .render(&mut f, chunks[1]),
-                3 => Block::default()
-                    .title("browse")
-                    .borders(Borders::ALL)
-                    .render(&mut f, chunks[1]),
+                0 => ui::screens::draw_queue(&mut f, &app, chunks[1]),
+                1 => ui::screens::draw_library(&mut f, &app, chunks[1]),
+                2 => ui::screens::draw_search(&mut f, &app, chunks[1]),
+                3 => ui::screens::draw_browse(&mut f, &app, chunks[1]),
                 _ => {}
             }
         });
