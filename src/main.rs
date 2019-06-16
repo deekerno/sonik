@@ -4,6 +4,7 @@ pub mod application;
 pub mod ui;
 
 use std::io;
+use std::thread;
 
 use rusqlite::Connection;
 use tui::Terminal;
@@ -85,8 +86,18 @@ fn main() -> Result<(), failure::Error> {
                     // Turn on repeat
                 },
                 Key::Char('u') => {
-                    database::database::update_database(&conn, &config.music_folder)?;
-                }
+                    app.updating_status = true;
+                    thread::spawn(|| {
+                        let upd_config = Config::get_config()
+                            .expect("Could not get or create configuration");
+                        database::database::update_database(
+                            &Connection::open(upd_config.database_path)
+                                .expect("Could not connect to database"), 
+                            &upd_config.music_folder
+                        );
+                    });
+                    app.updating_status = false;
+                },
                 Key::Char('>') => {
                     // Skip to next song
                 },

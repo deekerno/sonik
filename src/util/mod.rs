@@ -1,6 +1,7 @@
 pub mod event;
 
 use crate::application::queue::SonikQueue;
+use crate::database::track::Track;
 
 // Tabs only need name and ordering information
 pub struct TabsState<'a> {
@@ -30,6 +31,8 @@ pub struct App<'a> {
     pub queue: SonikQueue,
     pub should_quit: bool,
     pub tabs: TabsState<'a>,
+    pub now_playing: Track,
+    pub updating_status: bool,
 }
 
 impl<'a> App<'a> {
@@ -38,7 +41,9 @@ impl<'a> App<'a> {
             title,
             queue: SonikQueue::new(),
             should_quit: false,
-            tabs: TabsState::new(vec!["queue", "library", "search", "browse"])
+            tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
+            now_playing: Track::dummy(),
+            updating_status: false
         }
     }
 }

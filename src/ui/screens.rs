@@ -1,3 +1,4 @@
+use chrono::{Local, DateTime, NaiveTime};
 use tui::backend::Backend;
 use tui::Terminal;
 use termion::raw::IntoRawMode;
@@ -110,7 +111,7 @@ where
 
     let text = [
         Text::styled("Available Terms:\n", Style::default().fg(Color::Yellow)),
-        Text::styled("title, album, artist\nyear_less, year_greater", Style::default().fg(Color::Yellow))
+        Text::styled("title, album, artist\nyear_before, year_after", Style::default().fg(Color::Yellow))
     ];
     
     // Enclosing border
@@ -172,6 +173,8 @@ where
         )
         .direction(Direction::Horizontal)
         .split(area);
+    
+    // Draw tab explorer box
     Tabs::default()
         .block(Block::default().borders(Borders::ALL).title("tabs"))
         .titles(&app.tabs.titles)
@@ -180,12 +183,77 @@ where
         .highlight_style(Style::default().fg(Color::Yellow))
         .divider("       ")
         .render(f, chunks[0]);
+
+    draw_now_playing(f, chunks[1], app);
+
+    draw_status(f, chunks[2], app);
+}
+
+fn draw_now_playing<B>(f: &mut Frame<B>, area: Rect, app: &App)
+where
+    B: Backend,
+{
+    let track_info = [
+        Text::styled(&app.now_playing.title, Style::default().fg(Color::LightBlue)),
+        Text::raw(" - "),
+        Text::styled(&app.now_playing.artist, Style::default().fg(Color::LightGreen)),
+        Text::raw(" - "),
+        Text::styled(&app.now_playing.album, Style::default().fg(Color::LightRed))
+    ];
+
+    let chunks = Layout::default()
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Vertical)
+        .margin(1)
+        .split(area);
+
     Block::default()
         .borders(Borders::ALL)
         .title("now playing")
-        .render(f, chunks[1]);
+        .render(f, area);
+
+    Paragraph::new(track_info.iter())
+        .alignment(Alignment::Center)
+        .render(f, chunks[0]);
+}
+
+fn draw_status<B>(f: &mut Frame<B>, area: Rect, app: &App)
+where
+    B: Backend,
+{
+    // This part doesn't work right now, but will soon
+    let text = if app.updating_status {
+        [Text::raw(""),Text::raw("Updating..."),Text::raw("")]
+    } else {
+        [
+            Text::raw(
+                Local::now()
+                    .date()
+                    .format("%A, %B %d, %Y")
+                    .to_string()
+            ),
+            Text::raw(" | "),
+            Text::raw(
+                Local::now()
+                    .time()
+                    .format("%H:%M:%S")
+                    .to_string()
+            )
+        ]
+    };
+
+    let chunks = Layout::default()
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Vertical)
+        .margin(1)
+        .split(area);
+
     Block::default()
         .borders(Borders::ALL)
         .title("status")
-        .render(f, chunks[2]);
+        .render(f, area);
+
+    Paragraph::new(text.iter())
+        .alignment(Alignment::Center)
+        .render(f, chunks[0]);
 }

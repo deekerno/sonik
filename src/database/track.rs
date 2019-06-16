@@ -75,4 +75,17 @@ impl Track {
             }
         )
     }
+
+    pub fn dummy() -> Track {
+        Track {
+            file_path: "".to_string(),
+            title: "".to_string(),
+            artist: "".to_string(),
+            album_artist: "".to_string(),
+            album: "".to_string(),
+            year: 0,
+            track_num: 0,
+            duration: 0,
+        }
+    }
 }

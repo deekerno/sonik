@@ -1,5 +1,3 @@
-extern crate rusqlite;
-
 use std::fs;
 
 use ignore::{DirEntry, Walk};
@@ -50,8 +48,6 @@ fn is_music(entry: &DirEntry) -> bool {
 
 pub fn update_database(conn: &Connection, music_folder: &String) -> Result<()> {
 
-    //println!("Updating from: {}", music_folder);
-
     let mut tracks: Vec<Track> = Vec::new();
 
     // Walk through the music directory and add paths for each track
@@ -68,8 +64,6 @@ pub fn update_database(conn: &Connection, music_folder: &String) -> Result<()> {
         }
     }
 
-    //println!("Number of tracks: {}", &tracks.len());
-   
     add_tracks(conn, tracks)?;
 
     Ok(())

@@ -1,7 +1,7 @@
 [package]
 name = "sonik"
 version = "0.1.0"
-authors = ["adcrn <9167686+adcrn@users.noreply.github.com>"]
+authors = ["Alexander Decurnou <ad@alx.xyz"]
 edition = "2018"
 
 [dependencies]
@@ -19,8 +19,5 @@ serde_derive = "*"
 serde = "*"
 toml = "*"
 ignore = "*"
+chrono = "*"
 
-[dependencies.cursive]
-version = "*"
-default-features = false
-features = ["termion-backend"]

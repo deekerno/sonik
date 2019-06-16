@@ -3,8 +3,8 @@ pub enum Term {
     Title(String),
     Album(String),
     Artist(String),
-    YearLess(i32),
-    YearGreater(i32)
+    YearBefore(i32),
+    YearAfter(i32)
 }
 
 impl Term {
@@ -18,8 +18,8 @@ impl Term {
                 "title" => Some(Term::Title(elements[1].into())),
                 "album" => Some(Term::Album(elements[1].into())),
                 "artist" => Some(Term::Artist(elements[1].into())),
-                "year_less" => Some(Term::YearLess(elements[1].parse::<i32>().unwrap())),
-                "year_greater" => Some(Term::YearGreater(elements[1].parse::<i32>().unwrap())),
+                "year_before" => Some(Term::YearBefore(elements[1].parse::<i32>().unwrap())),
+                "year_after" => Some(Term::YearAfter(elements[1].parse::<i32>().unwrap())),
                 _ => return None
             }
         }
@@ -31,8 +31,8 @@ impl Term {
             Term::Title(x) => format!("title like '%{}%'", x),
             Term::Album(x) => format!("album like '%{}%'", x),
             Term::Artist(x) => format!("artist like '%{}%' or albumartists like '%{}%'", x, x),
-            Term::YearLess(x) => format!("year <= {}", x),
-            Term::YearGreater(x) => format!("year >= {}", x),
+            Term::YearBefore(x) => format!("year <= {}", x),
+            Term::YearAfter(x) => format!("year >= {}", x),
         }
     }
 }
