@@ -1,7 +1,7 @@
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 
-use crate::database::track::Track;
+use crate::database::record::Track;
 
 pub struct SonikQueue {
     pub tracks: Vec<Track>,

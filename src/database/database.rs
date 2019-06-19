@@ -4,7 +4,7 @@ use ignore::{DirEntry, Walk};
 use rusqlite::{Connection, Result};
 use rusqlite::NO_PARAMS;
 
-use crate::database::track::Track;
+use crate::database::record::{Album, Artist, Track};
 use crate::database::terms::SearchQuery;
 
 pub fn create_database(conn: &Connection) -> Result<()> {
@@ -22,6 +22,12 @@ pub fn create_database(conn: &Connection) -> Result<()> {
         )",
         NO_PARAMS,
     )?;
+
+    // Add all tracks to database
+    
+    // Select distinct artists from tracks table
+    
+    // Select 
 
     Ok(())
 }
@@ -97,8 +103,6 @@ pub fn add_tracks(conn: &Connection, tracks: Vec<Track>) -> Result<()> {
             ]
         )?;
     }
-
-    //println!("Update complete");
 
     Ok(())
 }

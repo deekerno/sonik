@@ -1,7 +1,8 @@
 pub mod event;
 
 use crate::application::queue::SonikQueue;
-use crate::database::track::Track;
+use crate::database::record::Track;
+
 
 // Tabs only need name and ordering information
 pub struct TabsState<'a> {
