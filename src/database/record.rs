@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -141,11 +142,6 @@ impl Album {
             }
         )
     }
-
-    // This will put the tracks in their correct tracklist order
-    pub fn sort(mut self) {
-        self.tracks.sort_by(|a, b| a.track_num.cmp(&b.track_num));
-    }
 }
 
 impl PartialOrd for Album {
@@ -162,7 +158,17 @@ impl Ord for Album {
 
 impl PartialEq for Album {
     fn eq(&self, other: &Album) -> bool {
+        // Tracklists are compared to make sure albums are different
+        // even if they share the same name, e.g. regular vs. deluxe albums
         self.title == other.title && vec_compare(&self.tracks, &other.tracks)
+    }
+}
+
+// Implementing borrow for album title so that it can be used
+// as a query type in the hash set inside an artist
+impl Borrow<String> for Album {
+    fn borrow(&self) -> String {
+        &self.title
     }
 }
 
@@ -199,6 +205,9 @@ impl Ord for Artist {
 
 impl PartialEq for Artist {
     fn eq(&self, other: &Artist) -> bool {
+
+        // Symmetric difference is used to make sure that two artists
+        // aren't exactly the same, even if they have the same name
         self.name == other.name && (self.albums.symmetric_difference(&other.albums).count() == 0)
     }
 }
