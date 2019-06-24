@@ -20,4 +20,4 @@ serde = "*"
 toml = "*"
 ignore = "*"
 chrono = "*"
-
+bincode = "*"

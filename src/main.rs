@@ -4,9 +4,9 @@ pub mod application;
 pub mod ui;
 
 use std::io;
+use std::path::Path;
 use std::thread;
 
-use rusqlite::Connection;
 use tui::Terminal;
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
@@ -15,6 +15,7 @@ use tui::widgets::{Widget, Block, Borders, Tabs};
 use tui::layout::{Layout, Constraint, Direction};
 use tui::style::{Color, Style};
 
+use crate::database::database::{create_and_load_database, load_database};
 use crate::util::event::{Event, Events};
 use crate::util::App;
 use crate::application::config::Config;
@@ -23,9 +24,16 @@ fn main() -> Result<(), failure::Error> {
 
     // Load the configuration for the program 
     // and attempt to connect to database
+    println!("Loading configuration...");
     let config = Config::get_config().expect("Could not get or create configuration");
-    let conn = Connection::open(config.database_path)?;
-    database::database::create_database(&conn)?;
+
+    if !Path::new(&config.database_path).exists() {
+        println!("Creating database...");
+        let artists = create_and_load_database(Path::new(&config.music_folder), Path::new(&config.database_path)).expect("Could not create database"); 
+    } else {
+        println!("Loading database...");
+        let artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
+    }
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
@@ -86,7 +94,7 @@ fn main() -> Result<(), failure::Error> {
                     // Turn on repeat
                 },
                 Key::Char('u') => {
-                    app.updating_status = true;
+                   /* app.updating_status = true;
                     thread::spawn(|| {
                         let upd_config = Config::get_config()
                             .expect("Could not get or create configuration");
@@ -96,7 +104,7 @@ fn main() -> Result<(), failure::Error> {
                             &upd_config.music_folder
                         );
                     });
-                    app.updating_status = false;
+                    app.updating_status = false;*/
                 },
                 Key::Char('>') => {
                     // Skip to next song

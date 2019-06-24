@@ -8,7 +8,7 @@ use id3::Tag;
 
 use crate::database::vec_compare;
 
-#[derive(Hash, Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Hash, Eq, Serialize, Deserialize, Debug)]
 pub struct Track {
     pub file_path: String,
     pub title: String,
@@ -20,7 +20,7 @@ pub struct Track {
     pub duration: u32,
 }
 
-#[derive(Hash, Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Hash, Eq, Serialize, Deserialize, Debug)]
 pub struct Album {
     pub title: String,
     pub artist: String,
@@ -97,6 +97,7 @@ impl Track {
         )
     }
 
+    // This is implemented mainly to have a blank now playing on startup
     pub fn dummy() -> Track {
         Track {
             file_path: "".to_string(),
@@ -167,7 +168,7 @@ impl PartialEq for Album {
 // Implementing borrow for album title so that it can be used
 // as a query type in the hash set inside an artist
 impl Borrow<String> for Album {
-    fn borrow(&self) -> String {
+    fn borrow(&self) -> &String {
         &self.title
     }
 }
@@ -184,9 +185,17 @@ impl Artist {
         )
     }
 
-    pub fn add_album(mut self, album: Album) -> Result<(), ()> {
+    pub fn add_album(&mut self, album: Album) -> Result<(), ()> {
         self.albums.insert(album);
 
+        Ok(())
+    }
+
+    pub fn update_album(&mut self, album_title: &String, t: Track) -> Result<(),()> {
+        let org_album = self.albums.get(album_title).unwrap();
+        let mut album = org_album.clone();
+        album.tracks.push(t);
+        self.albums.replace(album);
         Ok(())
     }
 }

@@ -1,5 +1,8 @@
 use std::fs;
+use std::io::{BufReader, BufWriter};
+use std::path::Path;
 
+use bincode::{deserialize_from, serialize_into};
 use ignore::{DirEntry, Walk};
 //use rusqlite::{Connection, Result};
 //use rusqlite::NO_PARAMS;
@@ -27,7 +30,7 @@ fn is_music(entry: &DirEntry) -> bool {
     }
 }
 
-pub fn create_database() -> Result<()> {
+pub fn create_and_load_database(music_folder: &Path, database_path: &Path) -> Result<Vec<Artist>, ()> {
 
     // create vector of artists
     let mut artists: Vec<Artist> = Vec::new();
@@ -38,7 +41,7 @@ pub fn create_database() -> Result<()> {
             Ok(entry) => if is_music(&entry) {
                 let track = Track::new(entry.into_path());
                 match track.ok() {
-                    Some(t) => add_to_database_helper(t),
+                    Some(t) => add_to_database_helper(t, &mut artists),
                     _ => (),
                 }
             },
@@ -46,10 +49,29 @@ pub fn create_database() -> Result<()> {
         }
     }
 
-    Ok(())
+    let mut f = BufWriter::new(
+        fs::File::create(database_path)
+        .expect("Could not write to database path")
+    );
+
+    serialize_into(&mut f, &artists).expect("Could not serialize database to file");
+
+    Ok(artists)
 }
 
-fn add_to_database_helper(t: Track) {
+pub fn load_database(database_path: &Path) -> Result<Vec<Artist>, ()> {
+    
+    let mut reader = BufReader::new(
+        fs::File::open(database_path)
+        .expect("Could not open database file")
+    );
+
+    let mut artists = deserialize_from(&mut reader).expect("Could not deserialize");
+
+    Ok(artists)
+}
+
+fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
 
     // Copy the string information out of the track and pass it 
     // to add_to_database along with the actual track struct
@@ -58,40 +80,49 @@ fn add_to_database_helper(t: Track) {
     let album_title = t.album.clone();
     let album_year = t.year.clone();
 
-    add_to_database(artist_name, album_title, album_year, t);
+    add_to_database(&artist_name, &album_title, album_year, t, artists);
 }
 
-fn add_to_database(artist_name: String, album_title: String, album_year: i32, t: Track) {
+fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, t: Track, artists: &mut Vec<Artist>) {
 
     // Strings should be copies of information in track
     // Use them to add/check artists/albums and add track
 
     // Find an artist that matches the artist name
-    let artist_index = artists.iter().position(|&a| a.name == artist_name);
+    let artist_index = artists.iter()
+                        .position(
+                            |a| a.name == artist_name.to_string()
+                        );
     
     match artist_index {
         // If there is an artist that matches that name...
         Some(idx) => {
-            // determine whether the album already exists for them 
-            let album = artists[idx].albums.get(album_title);
 
-            match album {
-                // If it exists, add the track to the album under that artist
-                Some(al) => {al.tracks.push(t);}
-                // If it doesn't, create the album and then add the track
-                None => {
-                    artists[idx].albums.insert(Album::new(album_title, artist_name, album_year));
-                    if let Some(a) = artists[idx].albums.get(album_title) {
-                        a.tracks.push(t);
-                    }
-                }
+            if artists[idx].albums.contains(album_title) {
+                artists[idx].update_album(album_title, t).ok();
+            } else {
+                let mut album = Album::new(
+                            album_title.to_string(), 
+                            artist_name.to_string(), 
+                            album_year
+                        ).unwrap();
+                album.tracks.push(t);
+                artists[idx].add_album(album);
             }
+
         }
+
         // If no artist matches that anem, then create the artist and album, and add track
         None => {
-            artists.push(Artist::new(artist_name));
-            artists[-1].albums.insert(Album::new(album_title, artist_name, album_year));
-            artists[-1].albums.get(album_title).unwrap().tracks.push(t);
+            let mut artist = Artist::new(artist_name.to_string()).unwrap();
+            let mut album = Album::new(
+                                album_title.to_string(), 
+                                artist_name.to_string(), 
+                                album_year
+                            ).unwrap();
+            album.tracks.push(t);
+            &artist.add_album(album);
+            artists.push(artist);
         }
     }
 }
