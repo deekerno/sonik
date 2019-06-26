@@ -1,4 +1,13 @@
-# sonik
+<p align="center">
+    <img alt="sonik" title="sonik" src="https://i.imgur.com/B6vYKJz.png"
+    width="450">
+</p>
+<h1 align="center">sonik</h1><br>
+<p align="center">
+A music player that's gotta go fast.
+</p>
+
+# Introduction
 _sonik_ is a console music player that is fast, lightweight, and elegant. It aims to play the music you want to hear as fast as you can get to it. Written in Rust, it has a small feature set in order to keep its memory footprint small.
 
 ## Installation
