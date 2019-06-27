@@ -7,6 +7,8 @@ use std::io;
 use std::path::Path;
 use std::thread;
 
+//use log::*;
+//use simplelog::*;
 use tui::Terminal;
 use tui::backend::TermionBackend;
 use termion::raw::IntoRawMode;
@@ -16,6 +18,7 @@ use tui::layout::{Layout, Constraint, Direction};
 use tui::style::{Color, Style};
 
 use crate::database::database::{create_and_load_database, load_database};
+use crate::database::record::Artist;
 use crate::util::event::{Event, Events};
 use crate::util::App;
 use crate::application::config::Config;
@@ -23,17 +26,24 @@ use crate::application::config::Config;
 fn main() -> Result<(), failure::Error> {
 
     // Load the configuration for the program 
-    // and attempt to connect to database
+    // and attempt to load the database
     println!("Loading configuration...");
     let config = Config::get_config().expect("Could not get or create configuration");
 
+    let artists;
+
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
-        let artists = create_and_load_database(Path::new(&config.music_folder), Path::new(&config.database_path)).expect("Could not create database"); 
+        artists = create_and_load_database(Path::new(&config.music_folder), Path::new(&config.database_path)).expect("Could not create database"); 
     } else {
         println!("Loading database...");
-        let artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
+        artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
     }
+
+    let events = Events::new();
+    let mut app = App::new("sonik", artists);
+
+    //debug - println!("Number of artists in database: {}", &app.database.len());
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
@@ -43,9 +53,6 @@ fn main() -> Result<(), failure::Error> {
     let mut terminal = Terminal::new(backend)?;
     terminal.hide_cursor()?;
     terminal.clear()?;
-    
-    let events = Events::new();
-    let mut app = App::new("sonik");
 
     loop {
         terminal.draw(|mut f| {

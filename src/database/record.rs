@@ -1,10 +1,11 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
-use serde_derive::{Serialize, Deserialize};
 
 use id3::Tag;
+use serde_derive::{Serialize, Deserialize};
 
 use crate::database::vec_compare;
 
@@ -20,7 +21,7 @@ pub struct Track {
     pub duration: u32,
 }
 
-#[derive(Clone, Hash, Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Eq, Serialize, Deserialize, Debug)]
 pub struct Album {
     pub title: String,
     pub artist: String,
@@ -34,7 +35,14 @@ pub struct Artist {
     pub albums: HashSet<Album>,
 }
 
+pub trait Record {
+    fn name(&self) -> &str;
+}
+
 impl Track {
+
+    // Should probably implement a Default for this
+
     pub fn new(path: PathBuf) -> Result<Track, ()> {
 
         // Some paths aren't UTF-8 compliant
@@ -130,9 +138,15 @@ impl PartialEq for Track {
     }
 }
 
+impl Record for Track {
+    fn name(&self) -> &str {
+        self.title.as_str()
+    }
+}
+
 impl Album {
     pub fn new(album_title: String, artist_name: String, release_year: i32) -> Result<Album, ()> {
-        let mut tracklist: Vec<Track> = Vec::new();
+        let tracklist: Vec<Track> = Vec::new();
 
         Ok(
             Album {
@@ -165,6 +179,12 @@ impl PartialEq for Album {
     }
 }
 
+impl Hash for Album {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.title.hash(state);
+    }
+}
+
 // Implementing borrow for album title so that it can be used
 // as a query type in the hash set inside an artist
 impl Borrow<String> for Album {
@@ -173,9 +193,15 @@ impl Borrow<String> for Album {
     }
 }
 
+impl Record for Album {
+    fn name(&self) -> &str {
+        self.title.as_str()
+    }
+}
+
 impl Artist {
     pub fn new(artist_name: String) -> Result<Artist, ()> {
-        let mut album_collection: HashSet<Album> = HashSet::new();
+        let album_collection: HashSet<Album> = HashSet::new();
 
         Ok(
             Artist {
@@ -192,10 +218,17 @@ impl Artist {
     }
 
     pub fn update_album(&mut self, album_title: &String, t: Track) -> Result<(),()> {
-        let org_album = self.albums.get(album_title).unwrap();
-        let mut album = org_album.clone();
-        album.tracks.push(t);
-        self.albums.replace(album);
+
+        // Yeah yeah, I know this is really inefficient, but I can't get a mutable
+        // reference to the album, so I'm taking it from the set, adding
+        // to it and then inserting it back into the set
+        let mut org_album = self.albums.take(album_title).unwrap();
+        org_album.tracks.push(t);
+
+        // This too, but this is a prototype, what do you want?
+        org_album.tracks.sort_by(|a, b| a.track_num.cmp(&b.track_num));
+
+        self.albums.insert(org_album);
         Ok(())
     }
 }
@@ -221,3 +254,8 @@ impl PartialEq for Artist {
     }
 }
 
+impl Record for Artist {
+    fn name(&self) -> &str {
+        &self.name[..]
+    }
+}

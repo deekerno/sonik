@@ -3,12 +3,13 @@ use tui::backend::Backend;
 use tui::Terminal;
 use termion::raw::IntoRawMode;
 use termion::event::Key;
-use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph};
+use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, SelectableList};
 use tui::layout::{Layout, Constraint, Direction, Rect, Alignment};
-use tui::style::{Color, Style};
+use tui::style::{Color, Modifier, Style};
 use tui::Frame;
 
 use crate::util::App;
+use crate::ui::widgets::RecordList;
 
 pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
 where 
@@ -46,13 +47,20 @@ where
         .split(area);
     
     // This will be the artist block
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, chunks[0]);
+    RecordList::default()
+    .block(Block::default().borders(Borders::ALL))
+    .items(&app.database)
+    .select(Some(1))
+    .style(Style::default().fg(Color::White))
+    .highlight_style(Style::default().modifier(Modifier::ITALIC))
+    .highlight_symbol(">>")
+    .render(f, chunks[0]);
+
     // This will be the albums of that artist
     Block::default()
         .borders(Borders::ALL)
         .render(f, chunks[1]);
+    
     // This will be the songs of that album of that artist
     Block::default()
         .borders(Borders::ALL)

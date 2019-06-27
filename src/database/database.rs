@@ -4,8 +4,6 @@ use std::path::Path;
 
 use bincode::{deserialize_from, serialize_into};
 use ignore::{DirEntry, Walk};
-//use rusqlite::{Connection, Result};
-//use rusqlite::NO_PARAMS;
 
 use crate::database::record::{Album, Artist, Track};
 use crate::database::terms::SearchQuery;
@@ -54,6 +52,9 @@ pub fn create_and_load_database(music_folder: &Path, database_path: &Path) -> Re
         .expect("Could not write to database path")
     );
 
+    // Sort for easy finding in the UI
+    artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+
     serialize_into(&mut f, &artists).expect("Could not serialize database to file");
 
     Ok(artists)
@@ -66,7 +67,7 @@ pub fn load_database(database_path: &Path) -> Result<Vec<Artist>, ()> {
         .expect("Could not open database file")
     );
 
-    let mut artists = deserialize_from(&mut reader).expect("Could not deserialize");
+    let artists = deserialize_from(&mut reader).expect("Could not deserialize");
 
     Ok(artists)
 }
@@ -97,130 +98,37 @@ fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, 
     match artist_index {
         // If there is an artist that matches that name...
         Some(idx) => {
-
+            // If the album already exists, update it with the track
             if artists[idx].albums.contains(album_title) {
                 artists[idx].update_album(album_title, t).ok();
             } else {
+                // If not, create the album and add the track
                 let mut album = Album::new(
                             album_title.to_string(), 
                             artist_name.to_string(), 
                             album_year
                         ).unwrap();
+                //debug - println!("Created new album: {}", album_title);
                 album.tracks.push(t);
                 artists[idx].add_album(album);
             }
 
         }
 
-        // If no artist matches that anem, then create the artist and album, and add track
+        // If no artist matches that name, then create the artist and album, and add track
         None => {
             let mut artist = Artist::new(artist_name.to_string()).unwrap();
+            //debug - println!("Created new artist: {}", &artist.name);
+            
             let mut album = Album::new(
                                 album_title.to_string(), 
                                 artist_name.to_string(), 
                                 album_year
                             ).unwrap();
+            //debug - println!("Created new album: {}", &album.title);
             album.tracks.push(t);
             &artist.add_album(album);
             artists.push(artist);
         }
     }
 }
-
-/*pub fn update_database(conn: &Connection, music_folder: &String) -> Result<()> {
-
-    let mut tracks: Vec<Track> = Vec::new();
-
-    // Walk through the music directory and add paths for each track
-    for result in Walk::new(music_folder) {
-        match result {
-            Ok(entry) => if is_music(&entry) {
-                let track = Track::new(entry.into_path());
-                match track.ok() {
-                    Some(t) => tracks.push(t),
-                    _ => (),
-                }
-            },
-            _ => (),
-        }
-    }
-
-    add_tracks(conn, tracks)?;
-
-    Ok(())
-}
-
-pub fn add_tracks(conn: &Connection, tracks: Vec<Track>) -> Result<()> {
-    
-    // Add each track's info to the database
-    for track in tracks { 
-        conn.execute(
-            "insert or replace into tracks
-            (
-                filepath,
-                title,
-                artist,
-                albumartists,
-                album,
-                year,
-                tracknum,
-                duration
-            ) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
-            &[
-                &track.file_path,
-                &track.title,
-                &track.artist,
-                &track.album_artist,
-                &track.album,
-                &track.year.to_string(),
-                &track.track_num.to_string(),
-                &track.duration.to_string(),
-            ]
-        )?;
-    }
-
-    Ok(())
-}
-
-pub fn query_database(conn: &Connection, query: String) -> Result<Vec<Track>> {
-    /*
-     * In the future, the database should be
-     * searchable using bangs, e.g. !y for year.
-     * List of bangs:
-     *  - !y - year
-     *  - !yl - year less than
-     *  - !yg - year greater than
-     *  - !t - title
-     *  - !a - artist
-     *  - !ala - album artist
-     *  - !al - album
-     * */
-
-    // Create a SQL query using the search terms given by the user
-    let search_query = SearchQuery::new(&query);
-    let mut stmt = conn.prepare(&search_query.to_sql_query())?;
-    
-    let results = stmt
-        .query_map(NO_PARAMS, |row|
-            Ok(
-                Track {
-                    file_path: row.get(0)?,
-                    title: row.get(1)?,
-                    artist: row.get(2)?,
-                    album_artist: row.get(3)?,
-                    album: row.get(4)?,
-                    year: row.get(5)?,
-                    track_num: row.get(6)?,
-                    duration: row.get(7)?,
-                }
-            )
-        )?;
-
-    let mut tracks: Vec<Track> = Vec::new();
-
-    for result in results {
-        tracks.push(result.unwrap());
-    }
-
-    Ok(tracks)
-}*/

@@ -24,7 +24,7 @@ impl Config {
         
         let mut database_path = home_dir().unwrap();
         database_path.push(".sonik");
-        database_path.push("tracks.db");
+        database_path.push("library.db");
 
         Config {
             music_folder: music_location.to_str().unwrap().to_owned(),

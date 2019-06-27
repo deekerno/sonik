@@ -1,7 +1,7 @@
 pub mod event;
 
 use crate::application::queue::SonikQueue;
-use crate::database::record::Track;
+use crate::database::record::{Artist, Track};
 
 
 // Tabs only need name and ordering information
@@ -29,6 +29,7 @@ impl<'a> TabsState<'a> {
 
 pub struct App<'a> {
     pub title: &'a str,
+    pub database: Vec<Artist>,
     pub queue: SonikQueue,
     pub should_quit: bool,
     pub tabs: TabsState<'a>,
@@ -37,9 +38,10 @@ pub struct App<'a> {
 }
 
 impl<'a> App<'a> {
-    pub fn new(title: &'a str) -> App<'a> {
+    pub fn new(title: &'a str, database: Vec<Artist>) -> App<'a> {
         App {
             title,
+            database,
             queue: SonikQueue::new(),
             should_quit: false,
             tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
