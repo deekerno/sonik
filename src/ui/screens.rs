@@ -1,16 +1,15 @@
-use chrono::{Local, DateTime, NaiveTime};
-use tui::backend::Backend;
-use tui::Terminal;
-use termion::raw::IntoRawMode;
+use chrono::Local;
 use termion::event::Key;
-use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, SelectableList};
+use termion::raw::IntoRawMode;
+use tui::Frame;
+use tui::Terminal;
+use tui::backend::Backend;
 use tui::layout::{Layout, Constraint, Direction, Rect, Alignment};
 use tui::style::{Color, Modifier, Style};
-use tui::Frame;
+use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, SelectableList};
 
-use crate::util::App;
+use crate::application::state::App;
 use crate::ui::widgets::RecordList;
-use crate::database::record::Album;
 
 pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
 where 
@@ -50,8 +49,8 @@ where
     // This will be the artist block
     RecordList::default()
         .block(Block::default().borders(Borders::ALL))
-        .items(&app.artists_col.items)
-        .select(Some(app.artists_col.selected))
+        .items(&app.lib_cols.artists.items)
+        .select(Some(app.lib_cols.artists.selected))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().modifier(Modifier::BOLD))
         .highlight_symbol(">>")
@@ -60,8 +59,8 @@ where
     // This will be the albums of that artist
     RecordList::default()
         .block(Block::default().borders(Borders::ALL))
-        .items(&app.album_col.items)
-        .select(Some(app.album_col.selected))
+        .items(&app.lib_cols.albums.items)
+        .select(Some(app.lib_cols.albums.selected))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().modifier(Modifier::BOLD))
         .highlight_symbol(">>")
@@ -70,8 +69,8 @@ where
     // This will be the songs of that album of that artist
     RecordList::default()
         .block(Block::default().borders(Borders::ALL))
-        .items(&app.track_col.items)
-        .select(Some(app.track_col.selected))
+        .items(&app.lib_cols.tracks.items)
+        .select(Some(app.lib_cols.tracks.selected))
         .style(Style::default().fg(Color::White))
         .highlight_style(Style::default().modifier(Modifier::BOLD))
         .highlight_symbol(">>")

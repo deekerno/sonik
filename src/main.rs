@@ -1,6 +1,6 @@
 mod util;
-pub mod database;
 pub mod application;
+pub mod database;
 pub mod ui;
 
 use std::io;
@@ -9,19 +9,18 @@ use std::thread;
 
 //use log::*;
 //use simplelog::*;
+use termion::event::Key;
+use termion::raw::IntoRawMode;
 use tui::Terminal;
 use tui::backend::TermionBackend;
-use termion::raw::IntoRawMode;
-use termion::event::Key;
-use tui::widgets::{Widget, Block, Borders, Tabs};
 use tui::layout::{Layout, Constraint, Direction};
 use tui::style::{Color, Style};
+use tui::widgets::{Widget, Block, Borders, Tabs};
 
-use crate::database::database::{create_and_load_database, load_database};
-use crate::database::record::Artist;
-use crate::util::event::{Event, Events};
-use crate::util::App;
 use crate::application::config::Config;
+use crate::application::state::App;
+use crate::database::database::{create_and_load_database, load_database};
+use crate::util::event::{Event, Events};
 
 fn main() -> Result<(), failure::Error> {
 
@@ -77,7 +76,7 @@ fn main() -> Result<(), failure::Error> {
                 3 => ui::screens::draw_browse(&mut f, &app, chunks[1]),
                 _ => {}
             }
-        });
+        })?;
 
         // Capture keypresses
         match events.next()? {
@@ -132,8 +131,10 @@ fn main() -> Result<(), failure::Error> {
                 Key::Char('2') => app.tabs.index = 1,
                 Key::Char('3') => app.tabs.index = 2,
                 Key::Char('4') => app.tabs.index = 3,
-                Key::Up => app.artists_col.select_previous(),
-                Key::Down => app.artists_col.select_next(),
+                Key::Up => app.lib_cols.on_up(),
+                Key::Down => app.lib_cols.on_down(),
+                Key::Left => app.lib_cols.switch_left(),
+                Key::Right => app.lib_cols.switch_right(),
                 _ => {}
             },
             _ => {}

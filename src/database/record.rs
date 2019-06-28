@@ -1,6 +1,5 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 

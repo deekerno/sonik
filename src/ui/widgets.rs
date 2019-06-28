@@ -8,7 +8,7 @@ use tui::layout::{Corner, Rect};
 use tui::style::Style;
 use tui::widgets::{Block, List, Text, Widget};
 
-use crate::database::record::{Album, Artist, Record, Track};
+use crate::database::record::Record;
 
 pub struct RecordList<'b> {
     block: Option<Block<'b>>,
