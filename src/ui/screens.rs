@@ -10,6 +10,7 @@ use tui::Frame;
 
 use crate::util::App;
 use crate::ui::widgets::RecordList;
+use crate::database::record::Album;
 
 pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
 where 
@@ -48,35 +49,33 @@ where
     
     // This will be the artist block
     RecordList::default()
-    .block(Block::default().borders(Borders::ALL))
-    .items(&app.database)
-    .select(Some(1))
-    .style(Style::default().fg(Color::White))
-    .highlight_style(Style::default().modifier(Modifier::ITALIC))
-    .highlight_symbol(">>")
-    .render(f, chunks[0]);
+        .block(Block::default().borders(Borders::ALL))
+        .items(&app.artists_col.items)
+        .select(Some(app.artists_col.selected))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .render(f, chunks[0]);
 
     // This will be the albums of that artist
-    Block::default()
-        .borders(Borders::ALL)
+    RecordList::default()
+        .block(Block::default().borders(Borders::ALL))
+        .items(&app.album_col.items)
+        .select(Some(app.album_col.selected))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
         .render(f, chunks[1]);
     
     // This will be the songs of that album of that artist
-    Block::default()
-        .borders(Borders::ALL)
+    RecordList::default()
+        .block(Block::default().borders(Borders::ALL))
+        .items(&app.track_col.items)
+        .select(Some(app.track_col.selected))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
         .render(f, chunks[2]);
-}
-
-fn populate_artists() {
-    //
-}
-
-fn populate_albums(artist: &String) {
-    //
-}
-
-fn populate_tracks(artist: &String, album: &String) {
-    //
 }
 
 pub fn draw_search<B>(f: &mut Frame<B>, app: &App, area: Rect)

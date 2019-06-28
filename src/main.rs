@@ -41,7 +41,7 @@ fn main() -> Result<(), failure::Error> {
     }
 
     let events = Events::new();
-    let mut app = App::new("sonik", artists);
+    let mut app = App::new("sonik", &artists);
 
     //debug - println!("Number of artists in database: {}", &app.database.len());
 
@@ -128,8 +128,12 @@ fn main() -> Result<(), failure::Error> {
                 Key::Char('n') => {
                     // Add track to front of queue
                 },
-                Key::Right => app.tabs.next(),
-                Key::Left => app.tabs.previous(),
+                Key::Char('1') => app.tabs.index = 0,
+                Key::Char('2') => app.tabs.index = 1,
+                Key::Char('3') => app.tabs.index = 2,
+                Key::Char('4') => app.tabs.index = 3,
+                Key::Up => app.artists_col.select_previous(),
+                Key::Down => app.artists_col.select_next(),
                 _ => {}
             },
             _ => {}

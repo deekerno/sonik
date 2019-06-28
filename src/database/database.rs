@@ -98,21 +98,27 @@ fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, 
     match artist_index {
         // If there is an artist that matches that name...
         Some(idx) => {
-            // If the album already exists, update it with the track
-            if artists[idx].albums.contains(album_title) {
-                artists[idx].update_album(album_title, t).ok();
-            } else {
-                // If not, create the album and add the track
-                let mut album = Album::new(
-                            album_title.to_string(), 
-                            artist_name.to_string(), 
-                            album_year
-                        ).unwrap();
-                //debug - println!("Created new album: {}", album_title);
-                album.tracks.push(t);
-                artists[idx].add_album(album);
-            }
+            let album_index = artists[idx].albums.iter()
+                                .position(
+                                    |al| al.title == album_title.to_string()
+                                );
+            match album_index {
+                Some(al_idx) => {
+                    artists[idx].albums[al_idx].update_album(t);
+                }
 
+                None => {
+                    // If not, create the album and add the track
+                    let mut album = Album::new(
+                                album_title.to_string(), 
+                                artist_name.to_string(), 
+                                album_year
+                            ).unwrap();
+                    //debug - println!("Created new album: {}", album_title);
+                    album.tracks.push(t);
+                    artists[idx].add_album(album);
+                }
+            }
         }
 
         // If no artist matches that name, then create the artist and album, and add track

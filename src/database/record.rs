@@ -29,10 +29,10 @@ pub struct Album {
     pub tracks: Vec<Track>,
 }
 
-#[derive(Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Eq, Serialize, Deserialize, Debug)]
 pub struct Artist {
     pub name: String,
-    pub albums: HashSet<Album>,
+    pub albums: Vec<Album>,
 }
 
 pub trait Record {
@@ -157,6 +157,15 @@ impl Album {
             }
         )
     }
+
+    pub fn update_album(&mut self, t: Track) -> Result<(),()> {
+
+        self.tracks.push(t);
+
+        self.tracks.sort_by(|a, b| a.track_num.cmp(&b.track_num));
+
+        Ok(())
+    }
 }
 
 impl PartialOrd for Album {
@@ -201,7 +210,7 @@ impl Record for Album {
 
 impl Artist {
     pub fn new(artist_name: String) -> Result<Artist, ()> {
-        let album_collection: HashSet<Album> = HashSet::new();
+        let album_collection: Vec<Album> = Vec::new();
 
         Ok(
             Artist {
@@ -212,23 +221,8 @@ impl Artist {
     }
 
     pub fn add_album(&mut self, album: Album) -> Result<(), ()> {
-        self.albums.insert(album);
+        self.albums.push(album);
 
-        Ok(())
-    }
-
-    pub fn update_album(&mut self, album_title: &String, t: Track) -> Result<(),()> {
-
-        // Yeah yeah, I know this is really inefficient, but I can't get a mutable
-        // reference to the album, so I'm taking it from the set, adding
-        // to it and then inserting it back into the set
-        let mut org_album = self.albums.take(album_title).unwrap();
-        org_album.tracks.push(t);
-
-        // This too, but this is a prototype, what do you want?
-        org_album.tracks.sort_by(|a, b| a.track_num.cmp(&b.track_num));
-
-        self.albums.insert(org_album);
         Ok(())
     }
 }
@@ -248,9 +242,7 @@ impl Ord for Artist {
 impl PartialEq for Artist {
     fn eq(&self, other: &Artist) -> bool {
 
-        // Symmetric difference is used to make sure that two artists
-        // aren't exactly the same, even if they have the same name
-        self.name == other.name && (self.albums.symmetric_difference(&other.albums).count() == 0)
+        self.name == other.name && (vec_compare(&self.albums, &other.albums))
     }
 }
 
