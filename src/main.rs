@@ -1,7 +1,7 @@
-mod util;
 pub mod application;
 pub mod database;
 pub mod ui;
+mod util;
 
 use std::io;
 use std::path::Path;
@@ -12,11 +12,11 @@ use std::thread;
 use rodio::Sink;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
-use tui::Terminal;
 use tui::backend::TermionBackend;
-use tui::layout::{Layout, Constraint, Direction};
+use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
-use tui::widgets::{Widget, Block, Borders, Tabs};
+use tui::widgets::{Block, Borders, Tabs, Widget};
+use tui::Terminal;
 
 use crate::application::config::Config;
 use crate::application::state::App;
@@ -24,8 +24,7 @@ use crate::database::database::{create_and_load_database, load_database};
 use crate::util::event::{Event, Events};
 
 fn main() -> Result<(), failure::Error> {
-
-    // Load the configuration for the program 
+    // Load the configuration for the program
     // and attempt to load the database
     println!("Loading configuration...");
     let config = Config::get_config().expect("Could not get or create configuration");
@@ -34,7 +33,11 @@ fn main() -> Result<(), failure::Error> {
 
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
-        artists = create_and_load_database(Path::new(&config.music_folder), Path::new(&config.database_path)).expect("Could not create database"); 
+        artists = create_and_load_database(
+            Path::new(&config.music_folder),
+            Path::new(&config.database_path),
+        )
+        .expect("Could not create database");
     } else {
         println!("Loading database...");
         artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
@@ -59,12 +62,7 @@ fn main() -> Result<(), failure::Error> {
             let size = f.size();
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints(
-                    [
-                        Constraint::Percentage(5),
-                        Constraint::Percentage(95),
-                    ].as_ref()
-                )
+                .constraints([Constraint::Percentage(5), Constraint::Percentage(95)].as_ref())
                 .split(f.size());
             Block::default()
                 .style(Style::default().bg(Color::Black))
@@ -86,46 +84,48 @@ fn main() -> Result<(), failure::Error> {
                     // Clear buffer so command line prompt is shown correctly
                     terminal.clear()?;
                     break;
-                },
+                }
                 Key::Char('p') => {
-                /*    if sink.is_paused() {
-                        sink.play();
+                    if app.sink.is_paused() {
+                        app.sink.play();
                     } else {
-                        sink.pause();
-                    }*/
-                },
+                        app.sink.pause();
+                    }
+                }
                 Key::Char('s') => {
                     // Turn on shuffle
-                },
+                    app.queue.shuffle();
+                }
                 Key::Char('r') => {
                     // Turn on repeat
-                },
+                }
                 Key::Char('u') => {
                     /*app.updating_status = true;
                     thread::spawn(|| {
                         artists = create_and_load_database(
-                            Path::new(&config.music_folder), 
+                            Path::new(&config.music_folder),
                             Path::new(&config.database_path))
-                            .expect("Could not create database"); 
+                            .expect("Could not create database");
                     });
                     app.updating_status = false;*/
-                },
+                }
                 Key::Char('>') => {
                     // Skip to next song
-                },
+                }
                 Key::Char('<') => {
                     // Skip to previous song
-                },
+                }
                 Key::Char(' ') => {
                     // Add track to queue
                     app.add_to_queue();
-                },
+                }
                 Key::Char('c') => {
-                    // Clear the queue  
-                },
+                    // Clear the queue
+                    app.queue.clear();
+                }
                 Key::Char('n') => {
                     // Add track to front of queue
-                },
+                }
                 Key::Char('1') => app.tabs.index = 0,
                 Key::Char('2') => app.tabs.index = 1,
                 Key::Char('3') => app.tabs.index = 2,

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use dirs::home_dir;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use toml;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -14,14 +14,13 @@ pub struct Config {
 
 impl Config {
     pub fn default() -> Config {
-        
-        // This bit could probably be optimized  
+        // This bit could probably be optimized
         let mut music_location = home_dir().unwrap();
         music_location.push("Music");
 
         let mut data_folder = home_dir().unwrap();
         data_folder.push(".sonik");
-        
+
         let mut database_path = home_dir().unwrap();
         database_path.push(".sonik");
         database_path.push("library.db");
@@ -34,7 +33,6 @@ impl Config {
     }
 
     pub fn get_config() -> Result<Config, ()> {
-        
         // Set path for configuration file
         let mut config_path: PathBuf = home_dir().unwrap();
         config_path.push(".sonik");
@@ -49,13 +47,12 @@ impl Config {
         // Create the configuration
         let config_string = fs::read_to_string(&config_path).unwrap();
         let config: Config = toml::from_str(&config_string).unwrap();
-        
+
         Ok(config)
     }
 }
 
 fn write_default_config(path: &Path) -> Option<()> {
-    
     // Get the default config and create the necessary folders
     let default_config = Config::default();
     fs::create_dir_all(default_config.data_folder).unwrap();

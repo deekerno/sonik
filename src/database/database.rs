@@ -9,7 +9,6 @@ use crate::database::record::{Album, Artist, Track};
 use crate::database::terms::SearchQuery;
 
 fn is_music(entry: &DirEntry) -> bool {
-    
     let metadata = fs::metadata(entry.path()).unwrap();
     if metadata.is_dir() {
         return false;
@@ -28,29 +27,31 @@ fn is_music(entry: &DirEntry) -> bool {
     }
 }
 
-pub fn create_and_load_database(music_folder: &Path, database_path: &Path) -> Result<Vec<Artist>, ()> {
-
+pub fn create_and_load_database(
+    music_folder: &Path,
+    database_path: &Path,
+) -> Result<Vec<Artist>, ()> {
     // create vector of artists
     let mut artists: Vec<Artist> = Vec::new();
 
     // Walk through the music directory and add paths for each track
     for result in Walk::new(music_folder) {
         match result {
-            Ok(entry) => if is_music(&entry) {
-                let track = Track::new(entry.into_path());
-                match track.ok() {
-                    Some(t) => add_to_database_helper(t, &mut artists),
-                    _ => (),
+            Ok(entry) => {
+                if is_music(&entry) {
+                    let track = Track::new(entry.into_path());
+                    match track.ok() {
+                        Some(t) => add_to_database_helper(t, &mut artists),
+                        _ => (),
+                    }
                 }
-            },
+            }
             _ => (),
         }
     }
 
-    let mut f = BufWriter::new(
-        fs::File::create(database_path)
-        .expect("Could not write to database path")
-    );
+    let mut f =
+        BufWriter::new(fs::File::create(database_path).expect("Could not write to database path"));
 
     // Sort for easy finding in the UI
     artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -61,11 +62,8 @@ pub fn create_and_load_database(music_folder: &Path, database_path: &Path) -> Re
 }
 
 pub fn load_database(database_path: &Path) -> Result<Vec<Artist>, ()> {
-    
-    let mut reader = BufReader::new(
-        fs::File::open(database_path)
-        .expect("Could not open database file")
-    );
+    let mut reader =
+        BufReader::new(fs::File::open(database_path).expect("Could not open database file"));
 
     let artists = deserialize_from(&mut reader).expect("Could not deserialize");
 
@@ -73,10 +71,9 @@ pub fn load_database(database_path: &Path) -> Result<Vec<Artist>, ()> {
 }
 
 fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
-
-    // Copy the string information out of the track and pass it 
+    // Copy the string information out of the track and pass it
     // to add_to_database along with the actual track struct
-    
+
     let artist_name = t.artist.clone();
     let album_title = t.album.clone();
     let album_year = t.year.clone();
@@ -84,24 +81,28 @@ fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
     add_to_database(&artist_name, &album_title, album_year, t, artists);
 }
 
-fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, t: Track, artists: &mut Vec<Artist>) {
-
+fn add_to_database(
+    artist_name: &String,
+    album_title: &String,
+    album_year: i32,
+    t: Track,
+    artists: &mut Vec<Artist>,
+) {
     // Strings should be copies of information in track
     // Use them to add/check artists/albums and add track
 
     // Find an artist that matches the artist name
-    let artist_index = artists.iter()
-                        .position(
-                            |a| a.name == artist_name.to_string()
-                        );
-    
+    let artist_index = artists
+        .iter()
+        .position(|a| a.name == artist_name.to_string());
+
     match artist_index {
         // If there is an artist that matches that name...
         Some(idx) => {
-            let album_index = artists[idx].albums.iter()
-                                .position(
-                                    |al| al.title == album_title.to_string()
-                                );
+            let album_index = artists[idx]
+                .albums
+                .iter()
+                .position(|al| al.title == album_title.to_string());
             match album_index {
                 Some(al_idx) => {
                     artists[idx].albums[al_idx].update_album(t);
@@ -109,11 +110,9 @@ fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, 
 
                 None => {
                     // If not, create the album and add the track
-                    let mut album = Album::new(
-                                album_title.to_string(), 
-                                artist_name.to_string(), 
-                                album_year
-                            ).unwrap();
+                    let mut album =
+                        Album::new(album_title.to_string(), artist_name.to_string(), album_year)
+                            .unwrap();
                     //debug - println!("Created new album: {}", album_title);
                     album.tracks.push(t);
                     artists[idx].add_album(album);
@@ -125,12 +124,9 @@ fn add_to_database(artist_name: &String, album_title: &String, album_year: i32, 
         None => {
             let mut artist = Artist::new(artist_name.to_string()).unwrap();
             //debug - println!("Created new artist: {}", &artist.name);
-            
-            let mut album = Album::new(
-                                album_title.to_string(), 
-                                artist_name.to_string(), 
-                                album_year
-                            ).unwrap();
+
+            let mut album =
+                Album::new(album_title.to_string(), artist_name.to_string(), album_year).unwrap();
             //debug - println!("Created new album: {}", &album.title);
             album.tracks.push(t);
             &artist.add_album(album);

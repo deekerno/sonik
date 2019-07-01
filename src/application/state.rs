@@ -1,11 +1,10 @@
+use rodio::Source;
 use rodio::{Device, Sink};
 use std::fs::File;
 use std::io::BufReader;
-use rodio::Source;
 
 use crate::application::queue::SonikQueue;
 use crate::database::record::{Album, Artist, Track};
-
 
 // Tabs only need name and ordering information
 pub struct TabsState<'a> {
@@ -35,9 +34,15 @@ pub struct ListState<I> {
     pub selected: usize,
 }
 
-impl<I> ListState<I> where I: std::clone::Clone {
+impl<I> ListState<I>
+where
+    I: std::clone::Clone,
+{
     fn new(items: &Vec<I>) -> ListState<I> {
-        ListState { items: items.to_vec(), selected: 0 }
+        ListState {
+            items: items.to_vec(),
+            selected: 0,
+        }
     }
 
     fn select_previous(&mut self) {
@@ -80,13 +85,13 @@ impl LibraryCols {
                 self.artists.select_previous();
                 self.albums = ListState::new(&self.artists.items[self.artists.selected].albums);
                 self.tracks = ListState::new(&self.albums.items[self.albums.selected].tracks);
-            },
+            }
             1 => {
                 self.albums.select_previous();
                 self.tracks = ListState::new(&self.albums.items[self.albums.selected].tracks);
-            },
-            2 => {self.tracks.select_previous()},
-            _ => {},
+            }
+            2 => self.tracks.select_previous(),
+            _ => {}
         };
     }
 
@@ -96,13 +101,13 @@ impl LibraryCols {
                 self.artists.select_next();
                 self.albums = ListState::new(&self.artists.items[self.artists.selected].albums);
                 self.tracks = ListState::new(&self.albums.items[self.albums.selected].tracks);
-            },
+            }
             1 => {
                 self.albums.select_next();
                 self.tracks = ListState::new(&self.albums.items[self.albums.selected].tracks);
-            },
-            2 => {self.tracks.select_next()},
-            _ => {},
+            }
+            2 => self.tracks.select_next(),
+            _ => {}
         };
     }
 }
@@ -121,7 +126,6 @@ pub struct App<'a> {
 
 impl<'a> App<'a> {
     pub fn new(title: &'a str, database: &Vec<Artist>, device: &'a Device) -> App<'a> {
-
         // Generate initial list states
         let art_col = ListState::new(database);
         let al_col = ListState::new(&art_col.items[art_col.selected].albums);
@@ -144,22 +148,22 @@ impl<'a> App<'a> {
             now_playing: Track::dummy(),
             device,
             sink: Sink::new(&device),
-            updating_status: false
+            updating_status: false,
         }
     }
 
     pub fn play_now(&mut self) {
         if self.lib_cols.current_active == 2 {
-            self.sink = Sink::new(&self.device);            
+            self.sink = Sink::new(&self.device);
             let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
             let file = File::open(&track.file_path).unwrap();
             let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
             self.sink.append(source);
             self.now_playing = track;
         } else if self.lib_cols.current_active == 1 {
-        
+
         } else {
-        
+
         }
     }
 
@@ -170,14 +174,13 @@ impl<'a> App<'a> {
         } else if self.lib_cols.current_active == 1 {
             for t in &self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks {
                 self.queue.add(t.clone());
-            } 
+            }
         } else {
             for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
                 for t in &a.tracks {
                     self.queue.add(t.clone());
                 }
-            } 
+            }
         }
-    
     }
 }

@@ -39,8 +39,7 @@ impl<'b> RecordList<'b> {
         self
     }
 
-    pub fn items<I: Record>(mut self, items: &'b [I]) -> RecordList<'b>
-    {
+    pub fn items<I: Record>(mut self, items: &'b [I]) -> RecordList<'b> {
         self.items = items.into_iter().map(|a| a.name()).collect::<Vec<&str>>();
         self
     }

@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use id3::Tag;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 use crate::database::vec_compare;
 
@@ -39,11 +39,9 @@ pub trait Record {
 }
 
 impl Track {
-
     // Should probably implement a Default for this
 
     pub fn new(path: PathBuf) -> Result<Track, ()> {
-
         // Some paths aren't UTF-8 compliant
         // For now, we will ignore these tracks
         let tag = Tag::read_from_path(&path);
@@ -51,7 +49,7 @@ impl Track {
             None => return Err(()),
             _ => (),
         }
-       
+
         // Anything that gets to this stage has a safe path
         let safe_tag = Tag::read_from_path(&path).unwrap();
 
@@ -90,18 +88,16 @@ impl Track {
             duration = x;
         }
 
-        Ok(
-            Track {
-                file_path: path.as_path().to_string_lossy().to_string(),
-                title: title,
-                artist: artist,
-                album_artist: album_artist,
-                album: album,
-                year: year,
-                track_num: track_num,
-                duration: duration,
-            }
-        )
+        Ok(Track {
+            file_path: path.as_path().to_string_lossy().to_string(),
+            title: title,
+            artist: artist,
+            album_artist: album_artist,
+            album: album,
+            year: year,
+            track_num: track_num,
+            duration: duration,
+        })
     }
 
     // This is implemented mainly to have a blank now playing on startup
@@ -147,18 +143,15 @@ impl Album {
     pub fn new(album_title: String, artist_name: String, release_year: i32) -> Result<Album, ()> {
         let tracklist: Vec<Track> = Vec::new();
 
-        Ok(
-            Album {
-                title: album_title,
-                artist: artist_name,
-                year: release_year,
-                tracks: tracklist,
-            }
-        )
+        Ok(Album {
+            title: album_title,
+            artist: artist_name,
+            year: release_year,
+            tracks: tracklist,
+        })
     }
 
-    pub fn update_album(&mut self, t: Track) -> Result<(),()> {
-
+    pub fn update_album(&mut self, t: Track) -> Result<(), ()> {
         self.tracks.push(t);
 
         self.tracks.sort_by(|a, b| a.track_num.cmp(&b.track_num));
@@ -211,18 +204,17 @@ impl Artist {
     pub fn new(artist_name: String) -> Result<Artist, ()> {
         let album_collection: Vec<Album> = Vec::new();
 
-        Ok(
-            Artist {
-                name: artist_name,
-                albums: album_collection,
-            }
-        )
+        Ok(Artist {
+            name: artist_name,
+            albums: album_collection,
+        })
     }
 
     pub fn add_album(&mut self, album: Album) -> Result<(), ()> {
         self.albums.push(album);
 
-        self.albums.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+        self.albums
+            .sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
 
         Ok(())
     }
@@ -242,7 +234,6 @@ impl Ord for Artist {
 
 impl PartialEq for Artist {
     fn eq(&self, other: &Artist) -> bool {
-
         self.name == other.name && (vec_compare(&self.albums, &other.albums))
     }
 }

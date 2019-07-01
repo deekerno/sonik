@@ -4,7 +4,7 @@ pub enum Term {
     Album(String),
     Artist(String),
     YearBefore(i32),
-    YearAfter(i32)
+    YearAfter(i32),
 }
 
 impl Term {
@@ -20,7 +20,7 @@ impl Term {
                 "artist" => Some(Term::Artist(elements[1].into())),
                 "year_before" => Some(Term::YearBefore(elements[1].parse::<i32>().unwrap())),
                 "year_after" => Some(Term::YearAfter(elements[1].parse::<i32>().unwrap())),
-                _ => return None
+                _ => return None,
             }
         }
     }
@@ -45,8 +45,11 @@ pub struct SearchQuery {
 impl SearchQuery {
     pub fn new(input: &str) -> SearchQuery {
         // Turns user input string into a collection of search terms
-        let terms = input.split(',').filter_map(Term::from_search_query).collect();
-        SearchQuery{terms: terms}
+        let terms = input
+            .split(',')
+            .filter_map(Term::from_search_query)
+            .collect();
+        SearchQuery { terms: terms }
     }
 
     pub fn to_sql_query(self) -> String {
@@ -55,10 +58,14 @@ impl SearchQuery {
         // If there's anything at all, start chaining terms together in SQL
         if !self.terms.is_empty() {
             sql_query.push_str(" where ");
-            sql_query.push_str(&self.terms.into_iter()
-                               .map(|x| x.to_sql_query())
-                               .collect::<Vec<String>>()
-                               .join(" AND  "));
+            sql_query.push_str(
+                &self
+                    .terms
+                    .into_iter()
+                    .map(|x| x.to_sql_query())
+                    .collect::<Vec<String>>()
+                    .join(" AND  "),
+            );
         }
 
         // Return the final SQL query string

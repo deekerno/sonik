@@ -1,12 +1,14 @@
 use chrono::Local;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
+use tui::backend::Backend;
+use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use tui::style::{Color, Modifier, Style};
+use tui::widgets::{
+    Block, Borders, List, Paragraph, Row, SelectableList, Table, Tabs, Text, Widget,
+};
 use tui::Frame;
 use tui::Terminal;
-use tui::backend::Backend;
-use tui::layout::{Layout, Constraint, Direction, Rect, Alignment};
-use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, Row, SelectableList, Table};
 
 use crate::application::state::App;
 use crate::ui::widgets::RecordList;
@@ -48,16 +50,19 @@ pub fn track_color(app: &App) -> Style {
     color
 }
 pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
-where 
+where
     B: Backend,
-{    
+{
     let chunks = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())
         .split(area);
     let row_style = Style::default().fg(Color::White);
     let header = ["Title", "Artist", "Album"].into_iter();
     let songs = app.queue.tracks.iter().map(|track| {
-        Row::StyledData(vec![&track.title, &track.artist, &track.album].into_iter(), row_style)
+        Row::StyledData(
+            vec![&track.title, &track.artist, &track.album].into_iter(),
+            row_style,
+        )
     });
 
     Table::new(header, songs)
@@ -76,15 +81,20 @@ where
             [
                 Constraint::Ratio(1, 3),
                 Constraint::Ratio(1, 3),
-                Constraint::Ratio(1, 3)
-            ].as_ref()
+                Constraint::Ratio(1, 3),
+            ]
+            .as_ref(),
         )
         .direction(Direction::Horizontal)
         .split(area);
-    
+
     // This will be the artist block
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL).style(artist_color(&app)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(artist_color(&app)),
+        )
         .items(&app.lib_cols.artists.items)
         .select(Some(app.lib_cols.artists.selected))
         .style(Style::default().fg(Color::White))
@@ -94,17 +104,25 @@ where
 
     // This will be the albums of that artist
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL).style(album_color(&app)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(album_color(&app)),
+        )
         .items(&app.lib_cols.albums.items)
         .select(Some(app.lib_cols.albums.selected))
         .style(Style::default().fg(Color::White))
         .highlight_style(album_color(&app).modifier(Modifier::BOLD))
         .highlight_symbol(">>")
         .render(f, chunks[1]);
-    
+
     // This will be the songs of that album of that artist
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL).style(track_color(&app)))
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .style(track_color(&app)),
+        )
         .items(&app.lib_cols.tracks.items)
         .select(Some(app.lib_cols.tracks.selected))
         .style(Style::default().fg(Color::White))
@@ -118,20 +136,12 @@ where
     B: Backend,
 {
     let chunks = Layout::default()
-        .constraints(
-            [
-                Constraint::Ratio(1,10),
-                Constraint::Ratio(9,10)
-            ].as_ref()
-        )
+        .constraints([Constraint::Ratio(1, 10), Constraint::Ratio(9, 10)].as_ref())
         .direction(Direction::Vertical)
         .split(area);
 
     draw_search_input(f, chunks[0]);
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, chunks[1]);
-    
+    Block::default().borders(Borders::ALL).render(f, chunks[1]);
 }
 
 fn draw_search_input<B>(f: &mut Frame<B>, area: Rect)
@@ -143,23 +153,25 @@ where
         .margin(1)
         .constraints(
             [
-                Constraint::Ratio(1,4),
-                Constraint::Ratio(1,4),
-                Constraint::Ratio(1,4),
-                Constraint::Ratio(1,4),
-            ].as_ref()
+                Constraint::Ratio(1, 4),
+                Constraint::Ratio(1, 4),
+                Constraint::Ratio(1, 4),
+                Constraint::Ratio(1, 4),
+            ]
+            .as_ref(),
         )
         .split(area);
 
     let text = [
         Text::styled("Available Terms:\n", Style::default().fg(Color::Yellow)),
-        Text::styled("title, album, artist\nyear_before, year_after", Style::default().fg(Color::Yellow))
+        Text::styled(
+            "title, album, artist\nyear_before, year_after",
+            Style::default().fg(Color::Yellow),
+        ),
     ];
-    
+
     // Enclosing border
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, area);
+    Block::default().borders(Borders::ALL).render(f, area);
 
     // Term explanations
     Paragraph::new(text.iter())
@@ -167,11 +179,9 @@ where
         .alignment(Alignment::Center)
         .wrap(true)
         .render(f, chunks[1]);
-    
+
     // Input box
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, chunks[2]);
+    Block::default().borders(Borders::ALL).render(f, chunks[2]);
 
     // unhide terminal cursor here and set it to box start
 }
@@ -183,22 +193,16 @@ where
     //
 }
 
-pub fn draw_browse<B>(f: &mut Frame<B>, app: &App, area: Rect) 
+pub fn draw_browse<B>(f: &mut Frame<B>, app: &App, area: Rect)
 where
     B: Backend,
 {
     let chunks = Layout::default()
-        .constraints(
-            [
-                Constraint::Percentage(100)
-            ].as_ref()
-        )
+        .constraints([Constraint::Percentage(100)].as_ref())
         .direction(Direction::Vertical)
         .split(area);
 
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, chunks[0]);
+    Block::default().borders(Borders::ALL).render(f, chunks[0]);
 }
 
 pub fn draw_top_bar<B>(f: &mut Frame<B>, app: &App, area: Rect)
@@ -208,14 +212,15 @@ where
     let chunks = Layout::default()
         .constraints(
             [
-                Constraint::Ratio(1,4),
-                Constraint::Ratio(1,2),
-                Constraint::Ratio(1,4)
-            ].as_ref()
+                Constraint::Ratio(1, 4),
+                Constraint::Ratio(1, 2),
+                Constraint::Ratio(1, 4),
+            ]
+            .as_ref(),
         )
         .direction(Direction::Horizontal)
         .split(area);
-    
+
     // Draw tab explorer box
     Tabs::default()
         .block(Block::default().borders(Borders::ALL).title("tabs"))
@@ -236,11 +241,17 @@ where
     B: Backend,
 {
     let track_info = [
-        Text::styled(&app.now_playing.title, Style::default().fg(Color::LightBlue)),
+        Text::styled(
+            &app.now_playing.title,
+            Style::default().fg(Color::LightBlue),
+        ),
         Text::raw(" - "),
-        Text::styled(&app.now_playing.artist, Style::default().fg(Color::LightGreen)),
+        Text::styled(
+            &app.now_playing.artist,
+            Style::default().fg(Color::LightGreen),
+        ),
         Text::raw(" - "),
-        Text::styled(&app.now_playing.album, Style::default().fg(Color::LightRed))
+        Text::styled(&app.now_playing.album, Style::default().fg(Color::LightRed)),
     ];
 
     let chunks = Layout::default()
@@ -265,22 +276,12 @@ where
 {
     // This part doesn't work right now, but will soon
     let text = if app.updating_status {
-        [Text::raw(""),Text::raw("Updating..."),Text::raw("")]
+        [Text::raw(""), Text::raw("Updating..."), Text::raw("")]
     } else {
         [
-            Text::raw(
-                Local::now()
-                    .date()
-                    .format("%A, %B %d, %Y")
-                    .to_string()
-            ),
+            Text::raw(Local::now().date().format("%A, %B %d, %Y").to_string()),
             Text::raw(" | "),
-            Text::raw(
-                Local::now()
-                    .time()
-                    .format("%H:%M:%S")
-                    .to_string()
-            )
+            Text::raw(Local::now().time().format("%H:%M:%S").to_string()),
         ]
     };
 
