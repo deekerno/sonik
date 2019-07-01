@@ -9,6 +9,7 @@ use std::thread;
 
 //use log::*;
 //use simplelog::*;
+use rodio::Sink;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use tui::Terminal;
@@ -39,13 +40,13 @@ fn main() -> Result<(), failure::Error> {
         artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
     }
 
-    let events = Events::new();
-    let mut app = App::new("sonik", &artists);
-
-    //debug - println!("Number of artists in database: {}", &app.database.len());
-
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
+
+    let events = Events::new();
+    let mut app = App::new("sonik", &artists, &device);
+
+    //debug - println!("Number of artists in database: {}", &app.database.len());
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
@@ -100,15 +101,12 @@ fn main() -> Result<(), failure::Error> {
                     // Turn on repeat
                 },
                 Key::Char('u') => {
-                   /* app.updating_status = true;
+                    /*app.updating_status = true;
                     thread::spawn(|| {
-                        let upd_config = Config::get_config()
-                            .expect("Could not get or create configuration");
-                        database::database::update_database(
-                            &Connection::open(upd_config.database_path)
-                                .expect("Could not connect to database"), 
-                            &upd_config.music_folder
-                        );
+                        artists = create_and_load_database(
+                            Path::new(&config.music_folder), 
+                            Path::new(&config.database_path))
+                            .expect("Could not create database"); 
                     });
                     app.updating_status = false;*/
                 },
@@ -118,8 +116,9 @@ fn main() -> Result<(), failure::Error> {
                 Key::Char('<') => {
                     // Skip to previous song
                 },
-                Key::Char('a') => {
+                Key::Char(' ') => {
                     // Add track to queue
+                    app.add_to_queue();
                 },
                 Key::Char('c') => {
                     // Clear the queue  
@@ -135,6 +134,7 @@ fn main() -> Result<(), failure::Error> {
                 Key::Down => app.lib_cols.on_down(),
                 Key::Left => app.lib_cols.switch_left(),
                 Key::Right => app.lib_cols.switch_right(),
+                Key::Char('\n') => app.play_now(),
                 _ => {}
             },
             _ => {}

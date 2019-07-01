@@ -6,11 +6,47 @@ use tui::Terminal;
 use tui::backend::Backend;
 use tui::layout::{Layout, Constraint, Direction, Rect, Alignment};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, SelectableList};
+use tui::widgets::{Widget, Block, Borders, Tabs, Text, List, Paragraph, Row, SelectableList, Table};
 
 use crate::application::state::App;
 use crate::ui::widgets::RecordList;
 
+// Yeah, I know this isn't elegant, but hey it works
+pub fn artist_color(app: &App) -> Style {
+    let color;
+
+    if app.lib_cols.current_active == 0 {
+        color = Style::default().fg(Color::Rgb(255, 255, 0))
+    } else {
+        color = Style::default().fg(Color::Rgb(173, 176, 73))
+    }
+
+    color
+}
+
+pub fn album_color(app: &App) -> Style {
+    let color;
+
+    if app.lib_cols.current_active == 1 {
+        color = Style::default().fg(Color::Rgb(255, 255, 0))
+    } else {
+        color = Style::default().fg(Color::Rgb(173, 176, 73))
+    }
+
+    color
+}
+
+pub fn track_color(app: &App) -> Style {
+    let color;
+
+    if app.lib_cols.current_active == 2 {
+        color = Style::default().fg(Color::Rgb(255, 255, 0))
+    } else {
+        color = Style::default().fg(Color::Rgb(173, 176, 73))
+    }
+
+    color
+}
 pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
 where 
     B: Backend,
@@ -18,16 +54,16 @@ where
     let chunks = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())
         .split(area);
-    Block::default()
-        .borders(Borders::ALL)
-        .render(f, area);
+    let row_style = Style::default().fg(Color::White);
+    let header = ["Title", "Artist", "Album"].into_iter();
     let songs = app.queue.tracks.iter().map(|track| {
-        Text::raw(
-            format!("{}\t\t{}\t\t{}", track.title, track.artist, track.album)    
-        )
+        Row::StyledData(vec![&track.title, &track.artist, &track.album].into_iter(), row_style)
     });
 
-    List::new(songs)
+    Table::new(header, songs)
+        .block(Block::default().borders(Borders::ALL))
+        .header_style(Style::default().fg(Color::Yellow))
+        .widths(&[60, 30, 40])
         .render(f, chunks[0]);
 }
 
@@ -48,31 +84,31 @@ where
     
     // This will be the artist block
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default().borders(Borders::ALL).style(artist_color(&app)))
         .items(&app.lib_cols.artists.items)
         .select(Some(app.lib_cols.artists.selected))
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_style(artist_color(&app).modifier(Modifier::BOLD))
         .highlight_symbol(">>")
         .render(f, chunks[0]);
 
     // This will be the albums of that artist
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default().borders(Borders::ALL).style(album_color(&app)))
         .items(&app.lib_cols.albums.items)
         .select(Some(app.lib_cols.albums.selected))
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_style(album_color(&app).modifier(Modifier::BOLD))
         .highlight_symbol(">>")
         .render(f, chunks[1]);
     
     // This will be the songs of that album of that artist
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default().borders(Borders::ALL).style(track_color(&app)))
         .items(&app.lib_cols.tracks.items)
         .select(Some(app.lib_cols.tracks.selected))
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().modifier(Modifier::BOLD))
+        .highlight_style(track_color(&app).modifier(Modifier::BOLD))
         .highlight_symbol(">>")
         .render(f, chunks[2]);
 }

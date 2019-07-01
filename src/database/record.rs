@@ -222,6 +222,8 @@ impl Artist {
     pub fn add_album(&mut self, album: Album) -> Result<(), ()> {
         self.albums.push(album);
 
+        self.albums.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
+
         Ok(())
     }
 }

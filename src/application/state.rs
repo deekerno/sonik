@@ -1,3 +1,8 @@
+use rodio::{Device, Sink};
+use std::fs::File;
+use std::io::BufReader;
+use rodio::Source;
+
 use crate::application::queue::SonikQueue;
 use crate::database::record::{Album, Artist, Track};
 
@@ -109,11 +114,13 @@ pub struct App<'a> {
     pub tabs: TabsState<'a>,
     pub lib_cols: LibraryCols,
     pub now_playing: Track,
+    pub device: &'a Device,
+    pub sink: Sink,
     pub updating_status: bool,
 }
 
 impl<'a> App<'a> {
-    pub fn new(title: &'a str, database: &Vec<Artist>) -> App<'a> {
+    pub fn new(title: &'a str, database: &Vec<Artist>, device: &'a Device) -> App<'a> {
 
         // Generate initial list states
         let art_col = ListState::new(database);
@@ -135,7 +142,42 @@ impl<'a> App<'a> {
             tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
             lib_cols: lib_cols,
             now_playing: Track::dummy(),
+            device,
+            sink: Sink::new(&device),
             updating_status: false
         }
+    }
+
+    pub fn play_now(&mut self) {
+        if self.lib_cols.current_active == 2 {
+            self.sink = Sink::new(&self.device);            
+            let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
+            let file = File::open(&track.file_path).unwrap();
+            let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
+            self.sink.append(source);
+            self.now_playing = track;
+        } else if self.lib_cols.current_active == 1 {
+        
+        } else {
+        
+        }
+    }
+
+    pub fn add_to_queue(&mut self) {
+        if self.lib_cols.current_active == 2 {
+            let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
+            self.queue.add(track);
+        } else if self.lib_cols.current_active == 1 {
+            for t in &self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks {
+                self.queue.add(t.clone());
+            } 
+        } else {
+            for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
+                for t in &a.tracks {
+                    self.queue.add(t.clone());
+                }
+            } 
+        }
+    
     }
 }
