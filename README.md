@@ -7,6 +7,8 @@
 A music player that's gotta go fast.
 </p>
 
+![sonik screenshot](https://i.imgur.com/oOje1iG.png)
+
 ## Introduction
 _sonik_ is a console music player that is fast, lightweight, and elegant. It aims to play the music you want to hear as fast as you can get to it. Written in Rust, it has a small feature set in order to keep its memory footprint small. The binary size is under 4MB and queueing up the entire collection clocks in about 5MB. The time taken for a completely cold database creation for a small 15GB collection was under two seconds. It plays MP3, FLAC, WAV, and Vorbis file formats, and primarily depends on ID3 tags to facilitate organization.
 
