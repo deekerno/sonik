@@ -11,11 +11,10 @@ A music player that's gotta go fast.
 _sonik_ is a console music player that is fast, lightweight, and elegant. It aims to play the music you want to hear as fast as you can get to it. Written in Rust, it has a small feature set in order to keep its memory footprint small. The binary size is under 4MB and queueing up the entire collection clocks in about 5MB. The time taken for a completely cold database creation for a small 15GB collection was under two seconds. It plays MP3, FLAC, WAV, and Vorbis file formats, and primarily depends on ID3 tags to facilitate organization.
 
 ### Note
-This program is in the *alpha* stage. It is now at v0.1 as it allows for the
-minimally viable usage of exploring the library and immediate playback. It
-currently does not support playing from the queue nor are the search or browse
-tabs implemented. There is some additional work to be done in trimming down the
-file size and possibly some speed. That being said, I think it's an enjoyable experience.
+This program is in the **alpha** stage. It is now at v0.2 as it allows for the
+minimally viable usage of exploring the library and immediate playback. The search or browse
+tabs are not implemented. There is some additional work to be done in trimming down the
+file size and possibly some speed improvements. That being said, I think it's an enjoyable experience. I use it to listen to my own collection.
 
 ## Installation
 Feel free to download the latest release and run `./sonik`. Or clone the repository and run `cargo
@@ -27,15 +26,16 @@ program. It will create and write the database to the program folder as
 `library.db`, and will then launch the interface.
 
 ## Usage
-| Control Keys  | Function              |
-| ------------- |----------------------:|
-| 1-4           | switch through tabs   |
-| Enter (Return)| play song now         |
-| Space         | add to queue          |
-| s             | shuffle queue in place|
-| < or >        | previous or next      |
-| c             | clear the queue       |
-| p             | play/pause            |
+| Control Keys  | Function                          |
+| ------------- |----------------------------------:|
+| 1-4           | switch through tabs               |
+| Enter (Return)| play track now                    |
+| Space         | add (track/album/artist) to queue |
+| s             | shuffle queue in place            |
+| >             | next track                        |
+| c             | clear the queue                   |
+| p             | play/pause                        |
+| n             | play track next                   |
 
 ## TODO
 - [x] create keyboard-driven interface
@@ -49,7 +49,7 @@ program. It will create and write the database to the program folder as
 - [ ] repeat track/playlist/album
 - [x] music database
 - [ ] search functionality
-- [ ] add multi-threading
+- [x] add multi-threading
 - [ ] add logging
 
 ## Disclaimer

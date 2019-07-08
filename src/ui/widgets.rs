@@ -1,10 +1,10 @@
-use std::convert::AsRef;
+//use std::convert::AsRef;
 use std::iter::{self, Iterator};
 
 use unicode_width::UnicodeWidthStr;
 
 use tui::buffer::Buffer;
-use tui::layout::{Corner, Rect};
+use tui::layout::Rect;
 use tui::style::Style;
 use tui::widgets::{Block, List, Text, Widget};
 

@@ -6,7 +6,7 @@ use bincode::{deserialize_from, serialize_into};
 use ignore::{DirEntry, Walk};
 
 use crate::database::record::{Album, Artist, Track};
-use crate::database::terms::SearchQuery;
+//use crate::database::terms::SearchQuery;
 
 fn is_music(entry: &DirEntry) -> bool {
     let metadata = fs::metadata(entry.path()).unwrap();

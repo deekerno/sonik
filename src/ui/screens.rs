@@ -1,20 +1,18 @@
 use chrono::Local;
-use termion::event::Key;
-use termion::raw::IntoRawMode;
+//use termion::event::Key;
+//use termion::raw::IntoRawMode;
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{
-    Block, Borders, List, Paragraph, Row, SelectableList, Table, Tabs, Text, Widget,
-};
+use tui::widgets::{Block, Borders, Paragraph, Row, Table, Tabs, Text, Widget};
 use tui::Frame;
-use tui::Terminal;
+//use tui::Terminal;
 
-use crate::application::state::App;
+use crate::application::state::UI;
 use crate::ui::widgets::RecordList;
 
 // Yeah, I know this isn't elegant, but hey it works
-pub fn artist_color(app: &App) -> Style {
+pub fn artist_color(app: &UI) -> Style {
     let color;
 
     if app.lib_cols.current_active == 0 {
@@ -26,7 +24,7 @@ pub fn artist_color(app: &App) -> Style {
     color
 }
 
-pub fn album_color(app: &App) -> Style {
+pub fn album_color(app: &UI) -> Style {
     let color;
 
     if app.lib_cols.current_active == 1 {
@@ -38,7 +36,7 @@ pub fn album_color(app: &App) -> Style {
     color
 }
 
-pub fn track_color(app: &App) -> Style {
+pub fn track_color(app: &UI) -> Style {
     let color;
 
     if app.lib_cols.current_active == 2 {
@@ -49,7 +47,7 @@ pub fn track_color(app: &App) -> Style {
 
     color
 }
-pub fn draw_queue<B>(f: &mut Frame<B>, app: &App, area: Rect)
+pub fn draw_queue<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -72,7 +70,7 @@ where
         .render(f, chunks[0]);
 }
 
-pub fn draw_library<B>(f: &mut Frame<B>, app: &App, area: Rect)
+pub fn draw_library<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -131,7 +129,7 @@ where
         .render(f, chunks[2]);
 }
 
-pub fn draw_search<B>(f: &mut Frame<B>, app: &App, area: Rect)
+pub fn draw_search<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -193,7 +191,7 @@ where
     //
 }
 
-pub fn draw_browse<B>(f: &mut Frame<B>, app: &App, area: Rect)
+pub fn draw_browse<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -205,7 +203,7 @@ where
     Block::default().borders(Borders::ALL).render(f, chunks[0]);
 }
 
-pub fn draw_top_bar<B>(f: &mut Frame<B>, app: &App, area: Rect)
+pub fn draw_top_bar<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -236,7 +234,7 @@ where
     draw_status(f, chunks[2], app);
 }
 
-fn draw_now_playing<B>(f: &mut Frame<B>, area: Rect, app: &App)
+fn draw_now_playing<B>(f: &mut Frame<B>, area: Rect, app: &UI)
 where
     B: Backend,
 {
@@ -270,7 +268,7 @@ where
         .render(f, chunks[0]);
 }
 
-fn draw_status<B>(f: &mut Frame<B>, area: Rect, app: &App)
+fn draw_status<B>(f: &mut Frame<B>, area: Rect, app: &UI)
 where
     B: Backend,
 {

@@ -6,20 +6,21 @@ mod util;
 use std::io;
 use std::path::Path;
 use std::thread;
+use std::time::Duration;
 
 //use log::*;
 //use simplelog::*;
-use rodio::Sink;
+use crossbeam_channel as channel;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use tui::backend::TermionBackend;
 use tui::layout::{Constraint, Direction, Layout};
 use tui::style::{Color, Style};
-use tui::widgets::{Block, Borders, Tabs, Widget};
+use tui::widgets::{Block, Widget};
 use tui::Terminal;
 
 use crate::application::config::Config;
-use crate::application::state::App;
+use crate::application::state::{Audio, UI};
 use crate::database::database::{create_and_load_database, load_database};
 use crate::util::event::{Event, Events};
 
@@ -31,6 +32,7 @@ fn main() -> Result<(), failure::Error> {
 
     let artists;
 
+    // Get or create the database
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
         artists = create_and_load_database(
@@ -46,10 +48,45 @@ fn main() -> Result<(), failure::Error> {
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
 
-    let events = Events::new();
-    let mut app = App::new("sonik", &artists, &device);
+    // Create the notification channel for empty
+    // audio sink and the track transfer channel
+    let (btx, brx) = channel::bounded(0);
+    let (ptx, prx) = channel::bounded(0);
+    let (ttx, trx) = channel::bounded(0);
+
+    // Keypress event handler, spins a thread
+    let ui_events = Events::new();
+
+    // Create structs to be managed on different threads
+    let mut ui = UI::new("sonik", &artists, brx, ttx, ptx);
+    let mut audio = Audio::new(device, trx, btx, prx);
 
     //debug - println!("Number of artists in database: {}", &app.database.len());
+
+    // All audio-related bits are sent to their own thread
+    thread::spawn(move || {
+        loop {
+            // Alert the UI thread that there is no song playing
+            if audio.sink.empty() {
+                audio.btx.send_timeout(true, Duration::from_millis(250));
+            } else {
+                audio.btx.send_timeout(false, Duration::from_millis(250));
+            }
+
+            // If the UI thread semds a track from the queue,
+            // receive it and send it to the sink
+            match audio.trx.try_recv() {
+                Ok(track) => audio.play(track),
+                _ => {}
+            }
+
+            // Listen for a play/pause event
+            match audio.prx.try_recv() {
+                Ok(true) => audio.pause_play(),
+                _ => {}
+            }
+        }
+    });
 
     let stdout = io::stdout().into_raw_mode()?;
     let backend = TermionBackend::new(stdout);
@@ -67,34 +104,30 @@ fn main() -> Result<(), failure::Error> {
             Block::default()
                 .style(Style::default().bg(Color::Black))
                 .render(&mut f, size);
-            ui::screens::draw_top_bar(&mut f, &app, chunks[0]);
-            match app.tabs.index {
-                0 => ui::screens::draw_queue(&mut f, &app, chunks[1]),
-                1 => ui::screens::draw_library(&mut f, &app, chunks[1]),
-                2 => ui::screens::draw_search(&mut f, &app, chunks[1]),
-                3 => ui::screens::draw_browse(&mut f, &app, chunks[1]),
+            ui::screens::draw_top_bar(&mut f, &ui, chunks[0]);
+            match ui.tabs.index {
+                0 => ui::screens::draw_queue(&mut f, &ui, chunks[1]),
+                1 => ui::screens::draw_library(&mut f, &ui, chunks[1]),
+                2 => ui::screens::draw_search(&mut f, &ui, chunks[1]),
+                3 => ui::screens::draw_browse(&mut f, &ui, chunks[1]),
                 _ => {}
             }
         })?;
 
         // Capture keypresses
-        match events.next()? {
+        match ui_events.next()? {
             Event::Input(input) => match input {
+                Key::Char('p') => {
+                    ui.pause_play();
+                }
                 Key::Char('q') => {
                     // Clear buffer so command line prompt is shown correctly
                     terminal.clear()?;
                     break;
                 }
-                Key::Char('p') => {
-                    if app.sink.is_paused() {
-                        app.sink.play();
-                    } else {
-                        app.sink.pause();
-                    }
-                }
                 Key::Char('s') => {
-                    // Turn on shuffle
-                    app.queue.shuffle();
+                    // Shuffle queue in place
+                    ui.queue.shuffle();
                 }
                 Key::Char('r') => {
                     // Turn on repeat
@@ -111,32 +144,42 @@ fn main() -> Result<(), failure::Error> {
                 }
                 Key::Char('>') => {
                     // Skip to next song
-                }
-                Key::Char('<') => {
-                    // Skip to previous song
+                    ui.play_from_queue();
                 }
                 Key::Char(' ') => {
                     // Add track to queue
-                    app.add_to_queue();
+                    ui.add_to_queue();
                 }
                 Key::Char('c') => {
                     // Clear the queue
-                    app.queue.clear();
+                    ui.queue.clear();
                 }
                 Key::Char('n') => {
                     // Add track to front of queue
+                    ui.add_to_front();
                 }
-                Key::Char('1') => app.tabs.index = 0,
-                Key::Char('2') => app.tabs.index = 1,
-                Key::Char('3') => app.tabs.index = 2,
-                Key::Char('4') => app.tabs.index = 3,
-                Key::Up => app.lib_cols.on_up(),
-                Key::Down => app.lib_cols.on_down(),
-                Key::Left => app.lib_cols.switch_left(),
-                Key::Right => app.lib_cols.switch_right(),
-                Key::Char('\n') => app.play_now(),
+                Key::Char('1') => ui.tabs.index = 0,
+                Key::Char('2') => ui.tabs.index = 1,
+                Key::Char('3') => ui.tabs.index = 2,
+                Key::Char('4') => ui.tabs.index = 3,
+                Key::Up => ui.lib_cols.on_up(),
+                Key::Down => ui.lib_cols.on_down(),
+                Key::Left => ui.lib_cols.switch_left(),
+                Key::Right => ui.lib_cols.switch_right(),
+                Key::Char('\n') => ui.play_now(),
                 _ => {}
             },
+            _ => {}
+        }
+
+        match ui.rx.recv_timeout(Duration::from_millis(250)) {
+            Ok(true) => {
+                if ui.queue.is_empty() {
+                    ui.blank_now_play();
+                } else {
+                    ui.play_from_queue();
+                }
+            }
             _ => {}
         }
     }
