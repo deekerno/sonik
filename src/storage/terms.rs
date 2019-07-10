@@ -20,12 +20,12 @@ impl Term {
                 "artist" => Some(Term::Artist(elements[1].into())),
                 "year_before" => Some(Term::YearBefore(elements[1].parse::<i32>().unwrap())),
                 "year_after" => Some(Term::YearAfter(elements[1].parse::<i32>().unwrap())),
-                _ => return None,
+                _ => None,
             }
         }
     }
 
-    pub fn to_sql_query(self) -> String {
+    pub fn to_sql_query(&self) -> String {
         match self {
             Term::Any(x) => format!("title like '%{}%' or album like '%{}%' or artist like '%{}%' or albumartists like '%{}%'", x, x, x, x),
             Term::Title(x) => format!("title like '%{}%'", x),
@@ -49,7 +49,7 @@ impl SearchQuery {
             .split(',')
             .filter_map(Term::from_search_query)
             .collect();
-        SearchQuery { terms: terms }
+        SearchQuery { terms }
     }
 
     pub fn to_sql_query(self) -> String {

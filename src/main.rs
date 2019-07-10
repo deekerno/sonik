@@ -1,5 +1,5 @@
 pub mod application;
-pub mod database;
+pub mod storage;
 pub mod ui;
 mod util;
 
@@ -21,7 +21,7 @@ use tui::Terminal;
 
 use crate::application::config::Config;
 use crate::application::state::{Audio, UI};
-use crate::database::database::{create_and_load_database, load_database};
+use crate::storage::database::*;
 use crate::util::event::{Event, Events};
 
 fn main() -> Result<(), failure::Error> {
@@ -31,18 +31,20 @@ fn main() -> Result<(), failure::Error> {
     let config = Config::get_config().expect("Could not get or create configuration");
 
     let artists;
+    let artists_map;
+    let artists_tree;
 
     // Get or create the database
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
-        artists = create_and_load_database(
-            Path::new(&config.music_folder),
-            Path::new(&config.database_path),
-        )
-        .expect("Could not create database");
+        artists = create_and_load_database(&config).expect("Could not create database");
+        artists_map = create_search_map(&artists, Path::new(&config.art_map_path)).expect("Could not create artist search map");
+        artists_tree = create_fuzzy_tree(&artists).expect("Could not create artist fuzzy search");
     } else {
         println!("Loading database...");
-        artists = load_database(Path::new(&config.database_path)).expect("Could not load database");
+        artists = load_database(&config).expect("Could not load database");
+        artists_map = load_search_map(Path::new(&config.art_map_path)).expect("Could not load artist search map");
+        artists_tree = create_fuzzy_tree(&artists).expect("Could not create artist fuzzy search");
     }
 
     // Create the sink for the audio output device
@@ -75,16 +77,10 @@ fn main() -> Result<(), failure::Error> {
 
             // If the UI thread semds a track from the queue,
             // receive it and send it to the sink
-            match audio.trx.try_recv() {
-                Ok(track) => audio.play(track),
-                _ => {}
-            }
+            if let Ok(track) = audio.trx.try_recv() { audio.play(track) }
 
             // Listen for a play/pause event
-            match audio.prx.try_recv() {
-                Ok(true) => audio.pause_play(),
-                _ => {}
-            }
+            if let Ok(true) = audio.prx.try_recv() { audio.pause_play() }
         }
     });
 
@@ -115,24 +111,36 @@ fn main() -> Result<(), failure::Error> {
         })?;
 
         // Capture keypresses
-        match ui_events.next()? {
-            Event::Input(input) => match input {
+        if let Event::Input(input) = ui_events.next()? {
+            match input {
                 Key::Char('p') => {
-                    ui.pause_play();
-                }
-                Key::Char('q') => {
+                    if ui.tabs.index == 2 {
+                        ui.search_input.push('p');
+                    } else {
+                        ui.pause_play();
+                    }
+                },
+                Key::Esc => {
                     // Clear buffer so command line prompt is shown correctly
                     terminal.clear()?;
                     break;
-                }
+                },
                 Key::Char('s') => {
-                    // Shuffle queue in place
-                    ui.queue.shuffle();
-                }
+                    if ui.tabs.index == 2 {
+                        ui.search_input.push('s');
+                    } else {
+                        // Shuffle queue in place
+                        ui.queue.shuffle();
+                    }
+                },
                 Key::Char('r') => {
-                    // Turn on repeat
-                }
-                Key::Char('u') => {
+                    if ui.tabs.index == 2 {
+                        ui.search_input.push('r');
+                    } else {
+                        // Turn on repeat
+                    }
+                },
+                /*Key::Char('u') => {
                     /*app.updating_status = true;
                     thread::spawn(|| {
                         artists = create_and_load_database(
@@ -141,46 +149,86 @@ fn main() -> Result<(), failure::Error> {
                             .expect("Could not create database");
                     });
                     app.updating_status = false;*/
-                }
+                },*/
                 Key::Char('>') => {
                     // Skip to next song
                     ui.play_from_queue();
-                }
+                },
                 Key::Char(' ') => {
-                    // Add track to queue
-                    ui.add_to_queue();
-                }
+                    if ui.tabs.index == 1 {
+                        // Add track to queue
+                        ui.add_to_queue();
+                    } else if ui.tabs.index == 2 {
+                        ui.search_input.push(' ');
+                    }
+                },
                 Key::Char('c') => {
-                    // Clear the queue
-                    ui.queue.clear();
-                }
+                    if ui.tabs.index == 2 {
+                        ui.search_input.push('c');
+                    } else {
+                        // Clear the queue
+                        ui.queue.clear();
+                    }
+                },
                 Key::Char('n') => {
-                    // Add track to front of queue
-                    ui.add_to_front();
-                }
+                    if ui.tabs.index == 2 {
+                        ui.search_input.push('n');
+                    } else {
+                        // Add track to front of queue
+                        ui.add_to_front();
+                    }
+                },
                 Key::Char('1') => ui.tabs.index = 0,
                 Key::Char('2') => ui.tabs.index = 1,
                 Key::Char('3') => ui.tabs.index = 2,
                 Key::Char('4') => ui.tabs.index = 3,
-                Key::Up => ui.lib_cols.on_up(),
-                Key::Down => ui.lib_cols.on_down(),
-                Key::Left => ui.lib_cols.switch_left(),
-                Key::Right => ui.lib_cols.switch_right(),
-                Key::Char('\n') => ui.play_now(),
+                Key::Up => {
+                    if ui.tabs.index == 1 {
+                        ui.lib_cols.on_up();
+                    }
+                },
+                Key::Down => {
+                    if ui.tabs.index == 1 {
+                        ui.lib_cols.on_down();
+                    }
+                },
+                Key::Left => {
+                    if ui.tabs.index == 1 {
+                        ui.lib_cols.switch_left();
+                    }
+                },
+                Key::Right => {
+                    if ui.tabs.index == 1 {
+                        ui.lib_cols.switch_right();
+                    }
+                },
+                Key::Char('\n') => {
+                    if ui.tabs.index == 1 {
+                        ui.play_now();
+                    } else if ui.tabs.index == 2{
+                        //
+                    }
+                },
+                Key::Char(c) => {
+                    if ui.tabs.index == 2 {
+                       ui.search_input.push(c); 
+                    }
+                },
+                Key::Backspace => {
+                    if ui.tabs.index == 2 {
+                        ui.search_input.pop();
+                    }
+                }
                 _ => {}
-            },
-            _ => {}
+            }
         }
 
-        match ui.rx.recv_timeout(Duration::from_millis(250)) {
-            Ok(true) => {
-                if ui.queue.is_empty() {
-                    ui.blank_now_play();
-                } else {
-                    ui.play_from_queue();
-                }
+        if let Ok(true) = ui.rx.recv_timeout(Duration::from_millis(250)) {
+            if ui.queue.is_empty() {
+                ui.blank_now_play();
+            } else {
+                ui.play_from_queue();
             }
-            _ => {}
         }
     }
     Ok(())

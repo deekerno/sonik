@@ -1,7 +1,7 @@
 use rand::thread_rng;
 use std::collections::VecDeque;
 
-use crate::database::record::Track;
+use crate::storage::record::Track;
 
 // Real requirement for shuffle
 trait LenAndSwap {
@@ -36,6 +36,7 @@ impl<T> LenAndSwap for VecDeque<T> {
     }
 }
 
+#[derive(Default)]
 pub struct SonikQueue {
     pub tracks: VecDeque<Track>,
     pub total_time: u32,
@@ -68,7 +69,7 @@ impl SonikQueue {
         shuffle(&mut self.tracks, thread_rng());
     }
 
-    pub fn is_empty(&mut self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.tracks.is_empty()
     }
 

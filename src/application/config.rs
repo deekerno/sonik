@@ -10,6 +10,8 @@ pub struct Config {
     pub music_folder: String,
     pub data_folder: String,
     pub database_path: String,
+    pub art_map_path: String,
+    pub art_tree_path: String
 }
 
 impl Config {
@@ -25,10 +27,20 @@ impl Config {
         database_path.push(".sonik");
         database_path.push("library.db");
 
+        let mut art_map_path = home_dir().unwrap();
+        art_map_path.push(".sonik");
+        art_map_path.push("artists.map");
+
+        let mut art_tree_path = home_dir().unwrap();
+        art_tree_path.push(".sonik");
+        art_tree_path.push("artists.t");
+
         Config {
             music_folder: music_location.to_str().unwrap().to_owned(),
             data_folder: data_folder.to_str().unwrap().to_owned(),
             database_path: database_path.to_str().unwrap().to_owned(),
+            art_map_path: art_map_path.to_str().unwrap().to_owned(),
+            art_tree_path: art_tree_path.to_str().unwrap().to_owned(),
         }
     }
 

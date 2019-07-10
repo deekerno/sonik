@@ -3,10 +3,13 @@ use std::io::{BufReader, BufWriter};
 use std::path::Path;
 
 use bincode::{deserialize_from, serialize_into};
+use hashbrown::HashMap;
 use ignore::{DirEntry, Walk};
 
-use crate::database::record::{Album, Artist, Track};
-//use crate::database::terms::SearchQuery;
+use crate::application::config::Config;
+use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::terms::SearchQuery;
+use crate::util::bktree::{BKTree, Levenshtein};
 
 fn is_music(entry: &DirEntry) -> bool {
     let metadata = fs::metadata(entry.path()).unwrap();
@@ -27,31 +30,22 @@ fn is_music(entry: &DirEntry) -> bool {
     }
 }
 
-pub fn create_and_load_database(
-    music_folder: &Path,
-    database_path: &Path,
-) -> Result<Vec<Artist>, ()> {
+pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
     // create vector of artists
     let mut artists: Vec<Artist> = Vec::new();
 
     // Walk through the music directory and add paths for each track
-    for result in Walk::new(music_folder) {
-        match result {
-            Ok(entry) => {
-                if is_music(&entry) {
-                    let track = Track::new(entry.into_path());
-                    match track.ok() {
-                        Some(t) => add_to_database_helper(t, &mut artists),
-                        _ => (),
-                    }
-                }
+    for result in Walk::new(&config.music_folder) {
+        if let Ok(entry) = result {
+            if is_music(&entry) {
+                let track = Track::new(entry.into_path());
+                if let Ok(t) = track { add_to_database_helper(t, &mut artists) }
             }
-            _ => (),
         }
     }
 
     let mut f =
-        BufWriter::new(fs::File::create(database_path).expect("Could not write to database path"));
+        BufWriter::new(fs::File::create(&config.database_path).expect("Could not write to database path"));
 
     // Sort for easy finding in the UI
     artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -61,11 +55,11 @@ pub fn create_and_load_database(
     Ok(artists)
 }
 
-pub fn load_database(database_path: &Path) -> Result<Vec<Artist>, ()> {
-    let mut reader =
-        BufReader::new(fs::File::open(database_path).expect("Could not open database file"));
+pub fn load_database(config: &Config) -> Result<Vec<Artist>, ()> {
+    let mut library_reader =
+        BufReader::new(fs::File::open(&config.database_path).expect("Could not open database file"));
 
-    let artists = deserialize_from(&mut reader).expect("Could not deserialize");
+    let artists = deserialize_from(&mut library_reader).expect("Could not deserialize");
 
     Ok(artists)
 }
@@ -76,14 +70,14 @@ fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
 
     let artist_name = t.artist.clone();
     let album_title = t.album.clone();
-    let album_year = t.year.clone();
+    let album_year = t.year;
 
     add_to_database(&artist_name, &album_title, album_year, t, artists);
 }
 
 fn add_to_database(
-    artist_name: &String,
-    album_title: &String,
+    artist_name: &str,
+    album_title: &str,
     album_year: i32,
     t: Track,
     artists: &mut Vec<Artist>,
@@ -94,7 +88,7 @@ fn add_to_database(
     // Find an artist that matches the artist name
     let artist_index = artists
         .iter()
-        .position(|a| a.name == artist_name.to_string());
+        .position(|a| a.name == artist_name);
 
     match artist_index {
         // If there is an artist that matches that name...
@@ -102,7 +96,7 @@ fn add_to_database(
             let album_index = artists[idx]
                 .albums
                 .iter()
-                .position(|al| al.title == album_title.to_string());
+                .position(|al| al.title == album_title);
             match album_index {
                 Some(al_idx) => {
                     artists[idx].albums[al_idx].update_album(t);
@@ -129,8 +123,62 @@ fn add_to_database(
                 Album::new(album_title.to_string(), artist_name.to_string(), album_year).unwrap();
             //debug - println!("Created new album: {}", &album.title);
             album.tracks.push(t);
-            &artist.add_album(album);
+            artist.add_album(album);
             artists.push(artist);
         }
     }
+}
+
+pub fn create_search_map<R: Record>(records: &[R], save_path: &Path) -> Result<HashMap<String, usize>, ()> {
+    let mut search_map = HashMap::new();
+
+    for (i, record) in (&records).iter().enumerate() {
+        let name = record.name();
+        search_map.insert(name.to_lowercase(), i);
+    }
+    
+    let mut map_file =
+        BufWriter::new(fs::File::create(save_path).expect("Could not write to map path"));
+
+    serialize_into(&mut map_file, &search_map).expect("Could not serialize map to file");
+
+    Ok(search_map)
+
+}
+
+pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {
+    let mut map_reader =
+        BufReader::new(fs::File::open(&file_path).expect("Could not open map file"));
+
+    let search_map = deserialize_from(&mut map_reader).expect("Could not deserialize");
+
+    Ok(search_map)
+}
+
+pub fn create_fuzzy_tree<R: Record>(records: &[R]) -> Result<BKTree<&str>, ()> {
+
+    let mut tree: BKTree<&str> = BKTree::new(Levenshtein);
+
+    for record in (&records).iter() {
+        tree.add(record.name());
+    }
+
+    //let mut tree_file = BufWriter::new(fs::File::create(save_path).expect("Could not write to tree path"));
+
+    //serialize_into(&mut tree_file, &tree).expect("Could not serialize bktree to file");
+
+    Ok(tree)
+}
+
+/*pub fn load_fuzzy_tree(file_path: &Path) -> Result<BKTree<&str>, ()> {
+    let mut reader =
+        BufReader::new(fs::File::open(&file_path).expect("Could not open map file"));
+
+    let tree = deserialize_from(&mut reader).expect("Could not deserialize");
+
+    Ok(tree)
+}*/
+
+pub fn search(query_string: &str) {
+    
 }

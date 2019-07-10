@@ -1,10 +1,10 @@
-use crossbeam_channel::{Receiver, Sender};
 use rodio::{Device, Sink};
 use std::fs::File;
 use std::io::BufReader;
+use crossbeam_channel::{Receiver, Sender};
 
 use crate::application::queue::SonikQueue;
-use crate::database::record::{Album, Artist, Track};
+use crate::storage::record::{Album, Artist, Track};
 
 // Tabs only need name and ordering information
 pub struct TabsState<'a> {
@@ -38,7 +38,7 @@ impl<I> ListState<I>
 where
     I: std::clone::Clone,
 {
-    fn new(items: &Vec<I>) -> ListState<I> {
+    fn new(items: &[I]) -> ListState<I> {
         ListState {
             items: items.to_vec(),
             selected: 0,
@@ -121,12 +121,7 @@ pub struct Audio {
 }
 
 impl Audio {
-    pub fn new(
-        device: Device,
-        trx: Receiver<Track>,
-        btx: Sender<bool>,
-        prx: Receiver<bool>,
-    ) -> Audio {
+    pub fn new(device: Device, trx: Receiver<Track>, btx: Sender<bool>, prx: Receiver<bool>) -> Audio {
         Audio {
             sink: Sink::new(&device),
             device,
@@ -167,16 +162,11 @@ pub struct UI<'a> {
     pub rx: Receiver<bool>,
     pub tx: Sender<Track>,
     pub ptx: Sender<bool>,
+    pub search_input: String,
 }
 
 impl<'a> UI<'a> {
-    pub fn new(
-        title: &'a str,
-        database: &Vec<Artist>,
-        rx: Receiver<bool>,
-        tx: Sender<Track>,
-        ptx: Sender<bool>,
-    ) -> UI<'a> {
+    pub fn new(title: &'a str, database: &[Artist], rx: Receiver<bool>, tx: Sender<Track>, ptx: Sender<bool>) -> UI<'a> {
         // Generate initial list states
         let art_col = ListState::new(database);
         let al_col = ListState::new(&art_col.items[art_col.selected].albums);
@@ -195,12 +185,13 @@ impl<'a> UI<'a> {
             queue: SonikQueue::new(),
             should_quit: false,
             tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
-            lib_cols: lib_cols,
+            lib_cols,
             now_playing: Track::dummy(),
             updating_status: false,
             rx,
             tx,
             ptx,
+            search_input: String::new(),
         }
     }
 
@@ -210,11 +201,12 @@ impl<'a> UI<'a> {
             let audio_copy = track.clone();
             self.tx.send(audio_copy);
             self.now_playing = track;
-        } else if self.lib_cols.current_active == 1 {
-
+        } 
+        /*else if self.lib_cols.current_active == 1 {
+            //
         } else {
-
-        }
+            //
+        }*/
     }
 
     pub fn play_from_queue(&mut self) {
@@ -264,10 +256,8 @@ impl<'a> UI<'a> {
 
     pub fn blank_now_play(&mut self) {
         match self.now_playing.title.as_ref() {
-            "" => {}
-            _ => {
-                self.now_playing = Track::dummy();
-            }
+            "" => {},
+            _ => {self.now_playing = Track::dummy();}
         }
     }
 }

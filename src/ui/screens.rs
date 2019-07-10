@@ -1,12 +1,15 @@
+use std::io::{self, Write};
+
 use chrono::Local;
-//use termion::event::Key;
-//use termion::raw::IntoRawMode;
+use termion::cursor::Goto;
+use termion::event::Key;
+use termion::raw::IntoRawMode;
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
 use tui::widgets::{Block, Borders, Paragraph, Row, Table, Tabs, Text, Widget};
 use tui::Frame;
-//use tui::Terminal;
+use tui::Terminal;
 
 use crate::application::state::UI;
 use crate::ui::widgets::RecordList;
@@ -55,7 +58,7 @@ where
         .constraints([Constraint::Percentage(100)].as_ref())
         .split(area);
     let row_style = Style::default().fg(Color::White);
-    let header = ["Title", "Artist", "Album"].into_iter();
+    let header = ["Title", "Artist", "Album"].iter();
     let songs = app.queue.tracks.iter().map(|track| {
         Row::StyledData(
             vec![&track.title, &track.artist, &track.album].into_iter(),
@@ -138,11 +141,11 @@ where
         .direction(Direction::Vertical)
         .split(area);
 
-    draw_search_input(f, chunks[0]);
+    draw_search_input(f, app, chunks[0]);
     Block::default().borders(Borders::ALL).render(f, chunks[1]);
 }
 
-fn draw_search_input<B>(f: &mut Frame<B>, area: Rect)
+fn draw_search_input<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
@@ -179,9 +182,19 @@ where
         .render(f, chunks[1]);
 
     // Input box
-    Block::default().borders(Borders::ALL).render(f, chunks[2]);
+    Paragraph::new([Text::raw(&app.search_input)].iter())
+        .style(Style::default().fg(Color::Yellow))
+        .block(Block::default().borders(Borders::ALL))
+        .render(f, chunks[2]);
 
     // unhide terminal cursor here and set it to box start
+    /*write!(
+        B.backend_mut(),
+        "{}",
+        Goto(4 + app.search_input.width() as u16, 4)
+    )?;*/
+
+    io::stdout().flush().ok();
 }
 
 fn draw_search_results<B>(f: &mut Frame<B>, area: Rect)

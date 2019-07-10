@@ -8,7 +8,7 @@ use tui::layout::Rect;
 use tui::style::Style;
 use tui::widgets::{Block, List, Text, Widget};
 
-use crate::database::record::Record;
+use crate::storage::record::Record;
 
 pub struct RecordList<'b> {
     block: Option<Block<'b>>,
@@ -40,7 +40,7 @@ impl<'b> RecordList<'b> {
     }
 
     pub fn items<I: Record>(mut self, items: &'b [I]) -> RecordList<'b> {
-        self.items = items.into_iter().map(|a| a.name()).collect::<Vec<&str>>();
+        self.items = items.iter().map(|a| a.name()).collect::<Vec<&str>>();
         self
     }
 

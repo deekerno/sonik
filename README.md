@@ -38,7 +38,7 @@ program. It will create and write the database to the program folder as
 | c             | clear the queue                   |
 | p             | play/pause                        |
 | n             | play track next                   |
-| q             | quit program                      |
+| Esc           | quit program                      |
 
 ## TODO
 - [x] create keyboard-driven interface

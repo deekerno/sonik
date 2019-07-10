@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use id3::Tag;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::database::vec_compare;
+use crate::storage::vec_compare;
 
-#[derive(Clone, Hash, Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Eq, Serialize, Deserialize, Debug)]
 pub struct Track {
     pub file_path: String,
     pub title: String,
@@ -90,13 +90,13 @@ impl Track {
 
         Ok(Track {
             file_path: path.as_path().to_string_lossy().to_string(),
-            title: title,
-            artist: artist,
-            album_artist: album_artist,
-            album: album,
-            year: year,
-            track_num: track_num,
-            duration: duration,
+            title, 
+            artist,
+            album_artist,
+            album,
+            year,
+            track_num,
+            duration,
         })
     }
 
