@@ -31,20 +31,17 @@ fn main() -> Result<(), failure::Error> {
     let config = Config::get_config().expect("Could not get or create configuration");
 
     let artists;
-    let artists_map;
-    let artists_tree;
+    let artists_engine;
 
     // Get or create the database
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
         artists = create_and_load_database(&config).expect("Could not create database");
-        artists_map = create_search_map(&artists, Path::new(&config.art_map_path)).expect("Could not create artist search map");
-        artists_tree = create_fuzzy_tree(&artists).expect("Could not create artist fuzzy search");
+        artists_engine = create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
     } else {
         println!("Loading database...");
         artists = load_database(&config).expect("Could not load database");
-        artists_map = load_search_map(Path::new(&config.art_map_path)).expect("Could not load artist search map");
-        artists_tree = create_fuzzy_tree(&artists).expect("Could not create artist fuzzy search");
+        artists_engine = create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
     }
 
     // Create the sink for the audio output device
@@ -60,7 +57,7 @@ fn main() -> Result<(), failure::Error> {
     let ui_events = Events::new();
 
     // Create structs to be managed on different threads
-    let mut ui = UI::new("sonik", &artists, brx, ttx, ptx);
+    let mut ui = UI::new(&artists, brx, ttx, ptx, artists_engine);
     let mut audio = Audio::new(device, trx, btx, prx);
 
     //debug - println!("Number of artists in database: {}", &app.database.len());
@@ -206,7 +203,7 @@ fn main() -> Result<(), failure::Error> {
                     if ui.tabs.index == 1 {
                         ui.play_now();
                     } else if ui.tabs.index == 2{
-                        //
+                        ui.search();
                     }
                 },
                 Key::Char(c) => {

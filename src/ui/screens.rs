@@ -7,7 +7,7 @@ use termion::raw::IntoRawMode;
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, Paragraph, Row, Table, Tabs, Text, Widget};
+use tui::widgets::{Block, Borders, List, Paragraph, Row, SelectableList, Table, Tabs, Text, Widget};
 use tui::Frame;
 use tui::Terminal;
 
@@ -142,7 +142,7 @@ where
         .split(area);
 
     draw_search_input(f, app, chunks[0]);
-    Block::default().borders(Borders::ALL).render(f, chunks[1]);
+    draw_search_results(f, app, chunks[1]);
 }
 
 fn draw_search_input<B>(f: &mut Frame<B>, app: &UI, area: Rect)
@@ -166,7 +166,7 @@ where
     let text = [
         Text::styled("Available Terms:\n", Style::default().fg(Color::Yellow)),
         Text::styled(
-            "title, album, artist\nyear_before, year_after",
+            "\ntitle, album, artist",
             Style::default().fg(Color::Yellow),
         ),
     ];
@@ -187,21 +187,26 @@ where
         .block(Block::default().borders(Borders::ALL))
         .render(f, chunks[2]);
 
-    // unhide terminal cursor here and set it to box start
-    /*write!(
-        B.backend_mut(),
-        "{}",
-        Goto(4 + app.search_input.width() as u16, 4)
-    )?;*/
-
     io::stdout().flush().ok();
 }
 
-fn draw_search_results<B>(f: &mut Frame<B>, area: Rect)
+fn draw_search_results<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
 {
-    //
+    let chunks = Layout::default()
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Vertical)
+        .split(area);
+
+    RecordList::default()
+        .block(Block::default().borders(Borders::ALL))
+        .items(&app.search_results)
+        .select(Some(0))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(Style::default().fg(Color::Rgb(255, 255, 0)).modifier(Modifier::BOLD))
+        .highlight_symbol(">>")
+        .render(f, chunks[0]);
 }
 
 pub fn draw_browse<B>(f: &mut Frame<B>, app: &UI, area: Rect)

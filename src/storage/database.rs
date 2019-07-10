@@ -5,11 +5,11 @@ use std::path::Path;
 use bincode::{deserialize_from, serialize_into};
 use hashbrown::HashMap;
 use ignore::{DirEntry, Walk};
+use simsearch::SimSearch;
 
 use crate::application::config::Config;
 use crate::storage::record::{Album, Artist, Record, Track};
 use crate::storage::terms::SearchQuery;
-use crate::util::bktree::{BKTree, Levenshtein};
 
 fn is_music(entry: &DirEntry) -> bool {
     let metadata = fs::metadata(entry.path()).unwrap();
@@ -155,30 +155,21 @@ pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {
     Ok(search_map)
 }
 
-pub fn create_fuzzy_tree<R: Record>(records: &[R]) -> Result<BKTree<&str>, ()> {
+pub fn create_fuzzy_searcher<R: Record>(records: &[R]) -> Result<SimSearch<usize>, ()> {
 
-    let mut tree: BKTree<&str> = BKTree::new(Levenshtein);
+    let mut engine: SimSearch<usize> = SimSearch::new();
 
-    for record in (&records).iter() {
-        tree.add(record.name());
+    for (i, record) in (&records).iter().enumerate() {
+        let name = record.name();
+        engine.insert(i, name);
     }
 
-    //let mut tree_file = BufWriter::new(fs::File::create(save_path).expect("Could not write to tree path"));
-
-    //serialize_into(&mut tree_file, &tree).expect("Could not serialize bktree to file");
-
-    Ok(tree)
+    Ok(engine)
 }
 
-/*pub fn load_fuzzy_tree(file_path: &Path) -> Result<BKTree<&str>, ()> {
-    let mut reader =
-        BufReader::new(fs::File::open(&file_path).expect("Could not open map file"));
-
-    let tree = deserialize_from(&mut reader).expect("Could not deserialize");
-
-    Ok(tree)
-}*/
-
-pub fn search(query_string: &str) {
+pub fn search(engine: &SimSearch<usize>, query_string: &str) -> Vec<usize> {
     
+    let results: Vec<usize> = engine.search(query_string);
+
+    results
 }
