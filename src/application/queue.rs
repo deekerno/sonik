@@ -36,6 +36,8 @@ impl<T> LenAndSwap for VecDeque<T> {
     }
 }
 
+// Thanks to StackOverflow for the bit of code above.
+
 #[derive(Default)]
 pub struct SonikQueue {
     pub tracks: VecDeque<Track>,

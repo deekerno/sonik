@@ -291,15 +291,12 @@ where
     B: Backend,
 {
     // This part doesn't work right now, but will soon
-    let text = if app.updating_status {
-        [Text::raw(""), Text::raw("Updating..."), Text::raw("")]
-    } else {
+    let text = 
         [
             Text::raw(Local::now().date().format("%A, %B %d, %Y").to_string()),
             Text::raw(" | "),
             Text::raw(Local::now().time().format("%H:%M:%S").to_string()),
-        ]
-    };
+        ];
 
     let chunks = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())

@@ -33,7 +33,7 @@ fn main() -> Result<(), failure::Error> {
     let artists;
     let artists_engine;
 
-    // Get or create the database
+    // Get or create the database and create search engine
     if !Path::new(&config.database_path).exists() {
         println!("Creating database...");
         artists = create_and_load_database(&config).expect("Could not create database");
@@ -48,7 +48,7 @@ fn main() -> Result<(), failure::Error> {
     let device = rodio::default_output_device().expect("No audio output device found");
 
     // Create the notification channel for empty
-    // audio sink and the track transfer channel
+    // audio sink, pause/play events, and the track transfer channel
     let (btx, brx) = channel::bounded(0);
     let (ptx, prx) = channel::bounded(0);
     let (ttx, trx) = channel::bounded(0);
@@ -137,16 +137,6 @@ fn main() -> Result<(), failure::Error> {
                         // Turn on repeat
                     }
                 },
-                /*Key::Char('u') => {
-                    /*app.updating_status = true;
-                    thread::spawn(|| {
-                        artists = create_and_load_database(
-                            Path::new(&config.music_folder),
-                            Path::new(&config.database_path))
-                            .expect("Could not create database");
-                    });
-                    app.updating_status = false;*/
-                },*/
                 Key::Char('>') => {
                     // Skip to next song
                     ui.play_from_queue();
@@ -220,6 +210,7 @@ fn main() -> Result<(), failure::Error> {
             }
         }
 
+        // Check for notifications that there is no audio being played
         if let Ok(true) = ui.rx.recv_timeout(Duration::from_millis(250)) {
             if ui.queue.is_empty() {
                 ui.blank_now_play();

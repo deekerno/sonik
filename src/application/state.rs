@@ -16,6 +16,7 @@ pub struct TabsState<'a> {
     pub index: usize,
 }
 
+// This allows for easy switching between tabs in the UI
 impl<'a> TabsState<'a> {
     pub fn new(titles: Vec<&'a str>) -> TabsState {
         TabsState { titles, index: 0 }
@@ -33,6 +34,7 @@ impl<'a> TabsState<'a> {
     }
 }
 
+// ListState allows for the selection and traversal of different lists
 pub struct ListState<I> {
     pub items: Vec<I>,
     pub selected: usize,
@@ -62,6 +64,7 @@ where
     }
 }
 
+// Associates all of the columns together by artist and album selection
 pub struct LibraryCols {
     pub artists: ListState<Artist>,
     pub albums: ListState<Album>,
@@ -116,6 +119,9 @@ impl LibraryCols {
     }
 }
 
+// t - track, b - bool, p - play/pause
+// Sends information to the UI when audio is not playing,
+// and also receives tracks from the queue as well as play/pause events
 pub struct Audio {
     pub device: Device,
     pub sink: Sink,
@@ -136,12 +142,15 @@ impl Audio {
     }
 
     pub fn play(&mut self, track: Track) {
+        // The clear function does not work for rodio::Sink, so the
+        // sink field is just reassigned and it works just as well
         self.sink = Sink::new(&self.device);
         let file = File::open(&track.file_path).unwrap();
         let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
         self.sink.append(source);
     }
 
+    // Notify the UI that there is no audio playing
     pub fn notify(&mut self) {
         self.btx.send(true);
     }
@@ -161,7 +170,6 @@ pub struct UI<'a> {
     pub tabs: TabsState<'a>,
     pub lib_cols: LibraryCols,
     pub now_playing: Track,
-    pub updating_status: bool,
     pub rx: Receiver<bool>,
     pub tx: Sender<Track>,
     pub ptx: Sender<bool>,
@@ -172,6 +180,7 @@ pub struct UI<'a> {
 
 impl<'a> UI<'a> {
     pub fn new(database: &[Artist], rx: Receiver<bool>, tx: Sender<Track>, ptx: Sender<bool>, fuzzy_searcher: SimSearch<usize>) -> UI<'a> {
+        
         // Generate initial list states
         let art_col = ListState::new(database);
         let al_col = ListState::new(&art_col.items[art_col.selected].albums);
@@ -191,7 +200,6 @@ impl<'a> UI<'a> {
             tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
             lib_cols,
             now_playing: Track::dummy(),
-            updating_status: false,
             rx,
             tx,
             ptx,
@@ -248,13 +256,15 @@ impl<'a> UI<'a> {
             let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
             self.queue.add_to_front(track);
         } else if self.lib_cols.current_active == 1 {
-            for t in &self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks {
-                self.queue.add_to_front(t.clone());
+            let mut tracklist = self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks.clone();
+            while let Some(t) = tracklist.pop() {
+                self.queue.add_to_front(t);
             }
         } else {
             for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
-                for t in &a.tracks {
-                    self.queue.add_to_front(t.clone());
+                let mut tracklist = a.tracks.clone();
+                while let Some(t) = tracklist.pop() {
+                    self.queue.add_to_front(t);
                 }
             }
         }

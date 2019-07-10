@@ -44,14 +44,14 @@ program. It will create and write the database to the program folder as
 - [x] create keyboard-driven interface
 - [x] current queue view
 - [x] library view
-- [ ] search view
+- [x] search view
 - [ ] file browser view
 - [x] play/pause/stop major audio formats
 - [ ] seek during playback
 - [x] shuffle algorithm
 - [ ] repeat track/playlist/album
 - [x] music database
-- [ ] search functionality
+- [x] search functionality
 - [x] add multi-threading
 - [ ] add logging
 
@@ -63,6 +63,7 @@ no expert. Please use at your own risk.
 ## Special Thanks
 - [rodio](https://github.com/tomaka/rodio): audio playback
 - [rust-id3](https://github.com/jameshurst/rust-id3): reading of ID3 metadata
+- [simsearch-rs](https://github.com/andylokandy/simsearch-rs): fuzzy search
 - [tui-rs](https://github.com/fdehau/tui-rs): terminal user interface library
 
 ## License
