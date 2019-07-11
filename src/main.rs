@@ -77,7 +77,11 @@ fn main() -> Result<(), failure::Error> {
             if let Ok(track) = audio.trx.try_recv() { audio.play(track) }
 
             // Listen for a play/pause event
-            if let Ok(true) = audio.prx.try_recv() { audio.pause_play() }
+            match audio.prx.try_recv() { 
+                Ok(true) => { audio.pause_play() },
+                Ok(false) => { audio.stop() },
+                _ => {},
+            }
         }
     });
 
@@ -102,7 +106,6 @@ fn main() -> Result<(), failure::Error> {
                 0 => ui::screens::draw_queue(&mut f, &ui, chunks[1]),
                 1 => ui::screens::draw_library(&mut f, &ui, chunks[1]),
                 2 => ui::screens::draw_search(&mut f, &ui, chunks[1]),
-                3 => ui::screens::draw_browse(&mut f, &ui, chunks[1]),
                 _ => {}
             }
         })?;
@@ -154,7 +157,7 @@ fn main() -> Result<(), failure::Error> {
                         ui.search_input.push('c');
                     } else {
                         // Clear the queue
-                        ui.queue.clear();
+                        ui.clear_queue();
                     }
                 },
                 Key::Char('n') => {
@@ -168,7 +171,6 @@ fn main() -> Result<(), failure::Error> {
                 Key::Char('1') => ui.tabs.index = 0,
                 Key::Char('2') => ui.tabs.index = 1,
                 Key::Char('3') => ui.tabs.index = 2,
-                Key::Char('4') => ui.tabs.index = 3,
                 Key::Up => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.on_up();

@@ -143,7 +143,6 @@ pub fn create_search_map<R: Record>(records: &[R], save_path: &Path) -> Result<H
     serialize_into(&mut map_file, &search_map).expect("Could not serialize map to file");
 
     Ok(search_map)
-
 }
 
 pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {

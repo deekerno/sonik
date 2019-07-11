@@ -209,18 +209,6 @@ where
         .render(f, chunks[0]);
 }
 
-pub fn draw_browse<B>(f: &mut Frame<B>, app: &UI, area: Rect)
-where
-    B: Backend,
-{
-    let chunks = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
-        .direction(Direction::Vertical)
-        .split(area);
-
-    Block::default().borders(Borders::ALL).render(f, chunks[0]);
-}
-
 pub fn draw_top_bar<B>(f: &mut Frame<B>, app: &UI, area: Rect)
 where
     B: Backend,
@@ -244,7 +232,7 @@ where
         .select(app.tabs.index)
         .style(Style::default().fg(Color::Cyan))
         .highlight_style(Style::default().fg(Color::Yellow))
-        .divider("       ")
+        .divider("              ")
         .render(f, chunks[0]);
 
     draw_now_playing(f, chunks[1], app);

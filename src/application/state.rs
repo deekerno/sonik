@@ -151,9 +151,7 @@ impl Audio {
     }
 
     // Notify the UI that there is no audio playing
-    pub fn notify(&mut self) {
-        self.btx.send(true);
-    }
+    pub fn notify(&mut self) { self.btx.send(true); }
 
     pub fn pause_play(&mut self) {
         if self.sink.is_paused() {
@@ -162,6 +160,8 @@ impl Audio {
             self.sink.pause();
         }
     }
+
+    pub fn stop(&mut self) { self.sink = Sink::new(&self.device); }
 }
 
 pub struct UI<'a> {
@@ -197,7 +197,7 @@ impl<'a> UI<'a> {
         UI {
             queue: SonikQueue::new(),
             should_quit: false,
-            tabs: TabsState::new(vec!["queue", "library", "search", "browse"]),
+            tabs: TabsState::new(vec!["queue", "library", "search"]),
             lib_cols,
             now_playing: Track::dummy(),
             rx,
@@ -268,6 +268,12 @@ impl<'a> UI<'a> {
                 }
             }
         }
+    }
+
+    pub fn clear_queue(&mut self) {
+        self.ptx.send(false);
+        self.queue.clear();
+        self.blank_now_play();
     }
 
     pub fn blank_now_play(&mut self) {

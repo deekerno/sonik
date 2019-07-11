@@ -13,10 +13,7 @@ A music player that's gotta go fast.
 _sonik_ is a console music player that is fast, lightweight, and elegant. It aims to play the music you want to hear as fast as you can get to it. Written in Rust, it has a small feature set in order to keep its memory footprint small. The binary size is under 4MB and queueing up the entire collection clocks in about 5MB. The time taken for a completely cold database creation for a small 15GB collection was under two seconds. It plays MP3, FLAC, WAV, and Vorbis file formats, and primarily depends on ID3 tags to facilitate organization.
 
 ### Note
-This program is in the **alpha** stage. It is now at v0.2 as it allows for the
-minimally viable usage of exploring the library and immediate playback. The search or browse
-tabs are not implemented. There is some additional work to be done in trimming down the
-file size and possibly some speed improvements. That being said, I think it's an enjoyable experience. I use it to listen to my own collection.
+This program is in the **alpha** stage. It is now at v0.3 as it allows for all the regular usage that you would expect from a basic music player. The search tab has been implemented; however, it only shows results for artists and does not interact with the library yet. There is some additional work to be done in trimming down the file size and possibly some speed improvements. That being said, I think it's an enjoyable experience. I use it to listen to my own collection.
 
 ## Installation
 Feel free to download the latest release and run `./sonik`. Or clone the repository and run `cargo
@@ -33,11 +30,11 @@ program. It will create and write the database to the program folder as
 | 1-4           | switch through tabs               |
 | Enter (Return)| play track now                    |
 | Space         | add (track/album/artist) to queue |
+| n             | play (track/album/artist) next    |
 | s             | shuffle queue in place            |
 | >             | next track                        |
-| c             | clear the queue                   |
+| c             | stop track and clear the queue    |
 | p             | play/pause                        |
-| n             | play track next                   |
 | Esc           | quit program                      |
 
 ## TODO
@@ -45,7 +42,6 @@ program. It will create and write the database to the program folder as
 - [x] current queue view
 - [x] library view
 - [x] search view
-- [ ] file browser view
 - [x] play/pause/stop major audio formats
 - [ ] seek during playback
 - [x] shuffle algorithm
@@ -54,6 +50,7 @@ program. It will create and write the database to the program folder as
 - [x] search functionality
 - [x] add multi-threading
 - [ ] add logging
+- [ ] add statistics
 
 ## Disclaimer
 This project makes no claims about keeping your data safe from harm's way. The
