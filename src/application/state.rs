@@ -7,7 +7,7 @@ use simsearch::SimSearch;
 
 use crate::application::queue::SonikQueue;
 use crate::storage::database::search as db_search;
-use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::record::{Album, Artist, Track};
 use crate::storage::terms::{SearchQuery, Term};
 
 // Tabs only need name and ordering information
@@ -131,7 +131,12 @@ pub struct Audio {
 }
 
 impl Audio {
-    pub fn new(device: Device, trx: Receiver<Track>, btx: Sender<bool>, prx: Receiver<bool>) -> Audio {
+    pub fn new(
+        device: Device,
+        trx: Receiver<Track>,
+        btx: Sender<bool>,
+        prx: Receiver<bool>,
+    ) -> Audio {
         Audio {
             sink: Sink::new(&device),
             device,
@@ -151,7 +156,9 @@ impl Audio {
     }
 
     // Notify the UI that there is no audio playing
-    pub fn notify(&mut self) { self.btx.send(true); }
+    pub fn notify(&mut self) {
+        self.btx.send(true);
+    }
 
     pub fn pause_play(&mut self) {
         if self.sink.is_paused() {
@@ -161,7 +168,9 @@ impl Audio {
         }
     }
 
-    pub fn stop(&mut self) { self.sink = Sink::new(&self.device); }
+    pub fn stop(&mut self) {
+        self.sink = Sink::new(&self.device);
+    }
 }
 
 pub struct UI<'a> {
@@ -179,8 +188,13 @@ pub struct UI<'a> {
 }
 
 impl<'a> UI<'a> {
-    pub fn new(database: &[Artist], rx: Receiver<bool>, tx: Sender<Track>, ptx: Sender<bool>, fuzzy_searcher: SimSearch<usize>) -> UI<'a> {
-        
+    pub fn new(
+        database: &[Artist],
+        rx: Receiver<bool>,
+        tx: Sender<Track>,
+        ptx: Sender<bool>,
+        fuzzy_searcher: SimSearch<usize>,
+    ) -> UI<'a> {
         // Generate initial list states
         let art_col = ListState::new(database);
         let al_col = ListState::new(&art_col.items[art_col.selected].albums);
@@ -215,7 +229,7 @@ impl<'a> UI<'a> {
             let audio_copy = track.clone();
             self.tx.send(audio_copy);
             self.now_playing = track;
-        } 
+        }
         /*else if self.lib_cols.current_active == 1 {
             //
         } else {
@@ -256,7 +270,9 @@ impl<'a> UI<'a> {
             let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
             self.queue.add_to_front(track);
         } else if self.lib_cols.current_active == 1 {
-            let mut tracklist = self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks.clone();
+            let mut tracklist = self.lib_cols.albums.items[self.lib_cols.albums.selected]
+                .tracks
+                .clone();
             while let Some(t) = tracklist.pop() {
                 self.queue.add_to_front(t);
             }
@@ -278,28 +294,31 @@ impl<'a> UI<'a> {
 
     pub fn blank_now_play(&mut self) {
         match self.now_playing.title.as_ref() {
-            "" => {},
-            _ => {self.now_playing = Track::dummy();}
+            "" => {}
+            _ => {
+                self.now_playing = Track::dummy();
+            }
         }
     }
 
     pub fn search(&mut self) {
-        if self.search_input == "" { return }
+        if self.search_input == "" {
+            return;
+        }
 
         let query_term = SearchQuery::new(self.search_input.as_str());
         self.search_input = String::new();
-        
+
         match query_term.terms {
-            Term::Any(s) => {},
-            Term::Title(s) => {},
-            Term::Album(s) => {},
+            Term::Any(s) => {}
+            Term::Title(s) => {}
+            Term::Album(s) => {}
             Term::Artist(s) => {
                 self.search_results = db_search(&self.fuzzy_searcher, s.as_str())
-                                        .iter()
-                                        .map(|x| {
-                                            self.lib_cols.artists.items[*x].clone()
-                                        }).collect();
-            },
+                    .iter()
+                    .map(|x| self.lib_cols.artists.items[*x].clone())
+                    .collect();
+            }
         }
     }
 }

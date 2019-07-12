@@ -1,15 +1,11 @@
 use std::io::{self, Write};
 
 use chrono::Local;
-use termion::cursor::Goto;
-use termion::event::Key;
-use termion::raw::IntoRawMode;
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, List, Paragraph, Row, SelectableList, Table, Tabs, Text, Widget};
+use tui::widgets::{Block, Borders, Paragraph, Row, Table, Tabs, Text, Widget};
 use tui::Frame;
-use tui::Terminal;
 
 use crate::application::state::UI;
 use crate::ui::widgets::RecordList;
@@ -165,10 +161,7 @@ where
 
     let text = [
         Text::styled("Available Terms:\n", Style::default().fg(Color::Yellow)),
-        Text::styled(
-            "\ntitle, album, artist",
-            Style::default().fg(Color::Yellow),
-        ),
+        Text::styled("\ntitle, album, artist", Style::default().fg(Color::Yellow)),
     ];
 
     // Enclosing border
@@ -204,7 +197,11 @@ where
         .items(&app.search_results)
         .select(Some(0))
         .style(Style::default().fg(Color::White))
-        .highlight_style(Style::default().fg(Color::Rgb(255, 255, 0)).modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .fg(Color::Rgb(255, 255, 0))
+                .modifier(Modifier::BOLD),
+        )
         .highlight_symbol(">>")
         .render(f, chunks[0]);
 }
@@ -237,7 +234,7 @@ where
 
     draw_now_playing(f, chunks[1], app);
 
-    draw_status(f, chunks[2], app);
+    draw_status(f, chunks[2]);
 }
 
 fn draw_now_playing<B>(f: &mut Frame<B>, area: Rect, app: &UI)
@@ -274,17 +271,16 @@ where
         .render(f, chunks[0]);
 }
 
-fn draw_status<B>(f: &mut Frame<B>, area: Rect, app: &UI)
+fn draw_status<B>(f: &mut Frame<B>, area: Rect)
 where
     B: Backend,
 {
     // This part doesn't work right now, but will soon
-    let text = 
-        [
-            Text::raw(Local::now().date().format("%A, %B %d, %Y").to_string()),
-            Text::raw(" | "),
-            Text::raw(Local::now().time().format("%H:%M:%S").to_string()),
-        ];
+    let text = [
+        Text::raw(Local::now().date().format("%A, %B %d, %Y").to_string()),
+        Text::raw(" | "),
+        Text::raw(Local::now().time().format("%H:%M:%S").to_string()),
+    ];
 
     let chunks = Layout::default()
         .constraints([Constraint::Percentage(100)].as_ref())

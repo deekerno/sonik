@@ -45,9 +45,8 @@ impl Track {
         // Some paths aren't UTF-8 compliant
         // For now, we will ignore these tracks
         let tag = Tag::read_from_path(&path);
-        match tag.ok() {
-            None => return Err(()),
-            _ => (),
+        if tag.is_err() {
+            return Err(());
         }
 
         // Anything that gets to this stage has a safe path
@@ -68,9 +67,14 @@ impl Track {
             album = s.to_string();
         }
 
-        let mut album_artist: String = "".to_string();
-        if let Some(s) = safe_tag.album_artist() {
-            album_artist = s.to_string();
+        let album_artist;
+        match safe_tag.album_artist() {
+            Some(s) => {
+                album_artist = s.to_string();
+            }
+            None => {
+                album_artist = artist.clone();
+            }
         }
 
         let mut year: i32 = 0;
@@ -90,7 +94,7 @@ impl Track {
 
         Ok(Track {
             file_path: path.as_path().to_string_lossy().to_string(),
-            title, 
+            title,
             artist,
             album_artist,
             album,

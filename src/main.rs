@@ -10,6 +10,7 @@ use std::time::Duration;
 
 //use log::*;
 //use simplelog::*;
+use clap::{App, Arg};
 use crossbeam_channel as channel;
 use termion::event::Key;
 use termion::raw::IntoRawMode;
@@ -25,24 +26,37 @@ use crate::storage::database::*;
 use crate::util::event::{Event, Events};
 
 fn main() -> Result<(), failure::Error> {
-    // Load the configuration for the program
-    // and attempt to load the database
+    let matches = App::new("sonik")
+        .version("0.3")
+        .author("Alexander Decurnou. <ad@alx.xyz>")
+        .about("A console music player")
+        .arg(
+            Arg::with_name("music_location")
+                .short("d")
+                .long("database_creation")
+                .value_name("FOLDER")
+                .help("Create the database using files from this location")
+                .takes_value(true),
+        )
+        .get_matches();
+
     println!("Loading configuration...");
-    let config = Config::get_config().expect("Could not get or create configuration");
 
-    let artists;
-    let artists_engine;
+    let config = match matches.value_of("music_location") {
+        Some(ml) => Config::new(ml).expect("Could not get or create configuration"),
+        _ => Config::get_config().expect("Could not get or create configuration"),
+    };
 
-    // Get or create the database and create search engine
-    if !Path::new(&config.database_path).exists() {
-        println!("Creating database...");
-        artists = create_and_load_database(&config).expect("Could not create database");
-        artists_engine = create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
+    println!("Loading database...");
+
+    let artists = if !Path::new(&config.database_path).exists() {
+        create_and_load_database(&config).expect("Could not create database")
     } else {
-        println!("Loading database...");
-        artists = load_database(&config).expect("Could not load database");
-        artists_engine = create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
-    }
+        load_database(&config).expect("Could not load database")
+    };
+
+    let artists_engine =
+        create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
 
     // Create the sink for the audio output device
     let device = rodio::default_output_device().expect("No audio output device found");
@@ -74,13 +88,15 @@ fn main() -> Result<(), failure::Error> {
 
             // If the UI thread semds a track from the queue,
             // receive it and send it to the sink
-            if let Ok(track) = audio.trx.try_recv() { audio.play(track) }
+            if let Ok(track) = audio.trx.try_recv() {
+                audio.play(track)
+            }
 
             // Listen for a play/pause event
-            match audio.prx.try_recv() { 
-                Ok(true) => { audio.pause_play() },
-                Ok(false) => { audio.stop() },
-                _ => {},
+            match audio.prx.try_recv() {
+                Ok(true) => audio.pause_play(),
+                Ok(false) => audio.stop(),
+                _ => {}
             }
         }
     });
@@ -119,12 +135,12 @@ fn main() -> Result<(), failure::Error> {
                     } else {
                         ui.pause_play();
                     }
-                },
+                }
                 Key::Esc => {
                     // Clear buffer so command line prompt is shown correctly
                     terminal.clear()?;
                     break;
-                },
+                }
                 Key::Char('s') => {
                     if ui.tabs.index == 2 {
                         ui.search_input.push('s');
@@ -132,18 +148,18 @@ fn main() -> Result<(), failure::Error> {
                         // Shuffle queue in place
                         ui.queue.shuffle();
                     }
-                },
+                }
                 Key::Char('r') => {
                     if ui.tabs.index == 2 {
                         ui.search_input.push('r');
                     } else {
                         // Turn on repeat
                     }
-                },
+                }
                 Key::Char('>') => {
                     // Skip to next song
                     ui.play_from_queue();
-                },
+                }
                 Key::Char(' ') => {
                     if ui.tabs.index == 1 {
                         // Add track to queue
@@ -151,7 +167,7 @@ fn main() -> Result<(), failure::Error> {
                     } else if ui.tabs.index == 2 {
                         ui.search_input.push(' ');
                     }
-                },
+                }
                 Key::Char('c') => {
                     if ui.tabs.index == 2 {
                         ui.search_input.push('c');
@@ -159,7 +175,7 @@ fn main() -> Result<(), failure::Error> {
                         // Clear the queue
                         ui.clear_queue();
                     }
-                },
+                }
                 Key::Char('n') => {
                     if ui.tabs.index == 2 {
                         ui.search_input.push('n');
@@ -167,7 +183,7 @@ fn main() -> Result<(), failure::Error> {
                         // Add track to front of queue
                         ui.add_to_front();
                     }
-                },
+                }
                 Key::Char('1') => ui.tabs.index = 0,
                 Key::Char('2') => ui.tabs.index = 1,
                 Key::Char('3') => ui.tabs.index = 2,
@@ -175,34 +191,34 @@ fn main() -> Result<(), failure::Error> {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.on_up();
                     }
-                },
+                }
                 Key::Down => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.on_down();
                     }
-                },
+                }
                 Key::Left => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.switch_left();
                     }
-                },
+                }
                 Key::Right => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.switch_right();
                     }
-                },
+                }
                 Key::Char('\n') => {
                     if ui.tabs.index == 1 {
                         ui.play_now();
-                    } else if ui.tabs.index == 2{
+                    } else if ui.tabs.index == 2 {
                         ui.search();
                     }
-                },
+                }
                 Key::Char(c) => {
                     if ui.tabs.index == 2 {
-                       ui.search_input.push(c); 
+                        ui.search_input.push(c);
                     }
-                },
+                }
                 Key::Backspace => {
                     if ui.tabs.index == 2 {
                         ui.search_input.pop();

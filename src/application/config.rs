@@ -11,7 +11,6 @@ pub struct Config {
     pub data_folder: String,
     pub database_path: String,
     pub art_map_path: String,
-    pub art_tree_path: String
 }
 
 impl Config {
@@ -31,17 +30,44 @@ impl Config {
         art_map_path.push(".sonik");
         art_map_path.push("artists.map");
 
-        let mut art_tree_path = home_dir().unwrap();
-        art_tree_path.push(".sonik");
-        art_tree_path.push("artists.t");
-
         Config {
             music_folder: music_location.to_str().unwrap().to_owned(),
             data_folder: data_folder.to_str().unwrap().to_owned(),
             database_path: database_path.to_str().unwrap().to_owned(),
             art_map_path: art_map_path.to_str().unwrap().to_owned(),
-            art_tree_path: art_tree_path.to_str().unwrap().to_owned(),
         }
+    }
+
+    pub fn new(music_location: &str) -> Result<Config, ()> {
+        let mut data_folder = home_dir().unwrap();
+        data_folder.push(".sonik");
+
+        let mut database_path = home_dir().unwrap();
+        database_path.push(".sonik");
+        database_path.push("library.db");
+
+        let mut art_map_path = home_dir().unwrap();
+        art_map_path.push(".sonik");
+        art_map_path.push("artists.map");
+
+        let config = Config {
+            music_folder: music_location.to_string(),
+            data_folder: data_folder.to_str().unwrap().to_owned(),
+            database_path: database_path.to_str().unwrap().to_owned(),
+            art_map_path: art_map_path.to_str().unwrap().to_owned(),
+        };
+
+        let mut config_path: PathBuf = home_dir().unwrap();
+        config_path.push(".sonik");
+        config_path.push("config.toml");
+
+        fs::create_dir_all(&config.data_folder).unwrap();
+
+        // Save the configuration info to a TOML file in the data folder
+        let config_as_str = toml::to_string(&config).unwrap();
+        fs::write(&config_path.to_string_lossy().into_owned(), config_as_str).ok();
+
+        Ok(config)
     }
 
     pub fn get_config() -> Result<Config, ()> {

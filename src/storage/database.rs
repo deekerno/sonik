@@ -9,7 +9,6 @@ use simsearch::SimSearch;
 
 use crate::application::config::Config;
 use crate::storage::record::{Album, Artist, Record, Track};
-use crate::storage::terms::SearchQuery;
 
 fn is_music(entry: &DirEntry) -> bool {
     let metadata = fs::metadata(entry.path()).unwrap();
@@ -39,13 +38,16 @@ pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
         if let Ok(entry) = result {
             if is_music(&entry) {
                 let track = Track::new(entry.into_path());
-                if let Ok(t) = track { add_to_database_helper(t, &mut artists) }
+                if let Ok(t) = track {
+                    add_to_database_helper(t, &mut artists)
+                }
             }
         }
     }
 
-    let mut f =
-        BufWriter::new(fs::File::create(&config.database_path).expect("Could not write to database path"));
+    let mut f = BufWriter::new(
+        fs::File::create(&config.database_path).expect("Could not write to database path"),
+    );
 
     // Sort for easy finding in the UI
     artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
@@ -56,8 +58,9 @@ pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
 }
 
 pub fn load_database(config: &Config) -> Result<Vec<Artist>, ()> {
-    let mut library_reader =
-        BufReader::new(fs::File::open(&config.database_path).expect("Could not open database file"));
+    let mut library_reader = BufReader::new(
+        fs::File::open(&config.database_path).expect("Could not open database file"),
+    );
 
     let artists = deserialize_from(&mut library_reader).expect("Could not deserialize");
 
@@ -68,7 +71,7 @@ fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
     // Copy the string information out of the track and pass it
     // to add_to_database along with the actual track struct
 
-    let artist_name = t.artist.clone();
+    let artist_name = t.album_artist.clone();
     let album_title = t.album.clone();
     let album_year = t.year;
 
@@ -86,9 +89,7 @@ fn add_to_database(
     // Use them to add/check artists/albums and add track
 
     // Find an artist that matches the artist name
-    let artist_index = artists
-        .iter()
-        .position(|a| a.name == artist_name);
+    let artist_index = artists.iter().position(|a| a.name == artist_name);
 
     match artist_index {
         // If there is an artist that matches that name...
@@ -129,14 +130,17 @@ fn add_to_database(
     }
 }
 
-pub fn create_search_map<R: Record>(records: &[R], save_path: &Path) -> Result<HashMap<String, usize>, ()> {
+pub fn create_search_map<R: Record>(
+    records: &[R],
+    save_path: &Path,
+) -> Result<HashMap<String, usize>, ()> {
     let mut search_map = HashMap::new();
 
     for (i, record) in (&records).iter().enumerate() {
         let name = record.name();
         search_map.insert(name.to_lowercase(), i);
     }
-    
+
     let mut map_file =
         BufWriter::new(fs::File::create(save_path).expect("Could not write to map path"));
 
@@ -155,7 +159,6 @@ pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {
 }
 
 pub fn create_fuzzy_searcher<R: Record>(records: &[R]) -> Result<SimSearch<usize>, ()> {
-
     let mut engine: SimSearch<usize> = SimSearch::new();
 
     for (i, record) in (&records).iter().enumerate() {
@@ -167,7 +170,6 @@ pub fn create_fuzzy_searcher<R: Record>(records: &[R]) -> Result<SimSearch<usize
 }
 
 pub fn search(engine: &SimSearch<usize>, query_string: &str) -> Vec<usize> {
-    
     let results: Vec<usize> = engine.search(query_string);
 
     results
