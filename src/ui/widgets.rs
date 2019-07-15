@@ -1,4 +1,3 @@
-//use std::convert::AsRef;
 use std::iter::{self, Iterator};
 
 use unicode_width::UnicodeWidthStr;
@@ -12,7 +11,6 @@ use crate::storage::record::Record;
 
 pub struct RecordList<'b> {
     block: Option<Block<'b>>,
-    // If this doesn't work automatically, generate a vec of artist names
     items: Vec<&'b str>,
     selected: Option<usize>,
     style: Style,

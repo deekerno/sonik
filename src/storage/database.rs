@@ -9,6 +9,39 @@ use simsearch::SimSearch;
 
 use crate::application::config::Config;
 use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::terms::{SearchQuery, Term};
+
+pub struct EngineGroup {
+    pub artists: Engine,
+    pub albums: Engine,
+    pub tracks: Engine,
+}
+
+pub enum Engine {
+    Artists(SimSearch<usize>),
+    Albums(SimSearch<(usize, usize)>),
+    Tracks(SimSearch<(usize, usize, usize)>),
+}
+
+impl Engine {
+    pub fn search(&self, query_str: &str) -> SearchResult {
+        match self {
+            Engine::Artists(e) => SearchResult::Artists(e.search(query_str)),
+            Engine::Albums(e) => SearchResult::Albums(e.search(query_str)),
+            Engine::Tracks(e) => SearchResult::Tracks(e.search(query_str)),
+        }
+    }
+}
+
+type ArtistResult = Vec<usize>;
+type AlbumResult = Vec<(usize, usize)>;
+type TrackResult = Vec<(usize, usize, usize)>;
+
+pub enum SearchResult {
+    Artists(ArtistResult),
+    Albums(AlbumResult),
+    Tracks(TrackResult),
+}
 
 fn is_music(entry: &DirEntry) -> bool {
     let metadata = fs::metadata(entry.path()).unwrap();
@@ -50,7 +83,7 @@ pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
     );
 
     // Sort for easy finding in the UI
-    artists.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    artists.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
 
     serialize_into(&mut f, &artists).expect("Could not serialize database to file");
 
@@ -89,7 +122,7 @@ fn add_to_database(
     // Use them to add/check artists/albums and add track
 
     // Find an artist that matches the artist name
-    let artist_index = artists.iter().position(|a| a.name == artist_name);
+    let artist_index = artists.iter().position(|a| a.title == artist_name);
 
     match artist_index {
         // If there is an artist that matches that name...
@@ -99,9 +132,7 @@ fn add_to_database(
                 .iter()
                 .position(|al| al.title == album_title);
             match album_index {
-                Some(al_idx) => {
-                    artists[idx].albums[al_idx].update_album(t);
-                }
+                Some(al_idx) => if let Ok(()) = artists[idx].albums[al_idx].update_album(t) {},
 
                 None => {
                     // If not, create the album and add the track
@@ -110,7 +141,7 @@ fn add_to_database(
                             .unwrap();
                     //debug - println!("Created new album: {}", album_title);
                     album.tracks.push(t);
-                    artists[idx].add_album(album);
+                    if let Ok(()) = artists[idx].add_album(album) {}
                 }
             }
         }
@@ -124,7 +155,7 @@ fn add_to_database(
                 Album::new(album_title.to_string(), artist_name.to_string(), album_year).unwrap();
             //debug - println!("Created new album: {}", &album.title);
             album.tracks.push(t);
-            artist.add_album(album);
+            if let Ok(()) = artist.add_album(album) {}
             artists.push(artist);
         }
     }
@@ -158,19 +189,35 @@ pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {
     Ok(search_map)
 }
 
-pub fn create_fuzzy_searcher<R: Record>(records: &[R]) -> Result<SimSearch<usize>, ()> {
-    let mut engine: SimSearch<usize> = SimSearch::new();
+pub fn create_fuzzy_searcher(records: &[Artist]) -> Result<EngineGroup, ()> {
+    let mut artists: SimSearch<usize> = SimSearch::new();
+    let mut albums: SimSearch<(usize, usize)> = SimSearch::new();
+    let mut tracks: SimSearch<(usize, usize, usize)> = SimSearch::new();
 
     for (i, record) in (&records).iter().enumerate() {
-        let name = record.name();
-        engine.insert(i, name);
+        let artist_name = &record.title;
+        artists.insert(i, &artist_name);
+        for (j, album) in (&record.albums).iter().enumerate() {
+            let album_name = &album.title;
+            albums.insert((i, j), &album_name);
+            for (k, track) in (&album.tracks).iter().enumerate() {
+                let track_name = &track.title;
+                tracks.insert((i, j, k), &track_name);
+            }
+        }
     }
 
-    Ok(engine)
+    Ok(EngineGroup {
+        artists: Engine::Artists(artists),
+        albums: Engine::Albums(albums),
+        tracks: Engine::Tracks(tracks),
+    })
 }
 
-pub fn search(engine: &SimSearch<usize>, query_string: &str) -> Vec<usize> {
-    let results: Vec<usize> = engine.search(query_string);
-
-    results
+pub fn search(engine: &EngineGroup, query: SearchQuery) -> SearchResult {
+    match query.terms {
+        Term::Title(s) => engine.tracks.search(s.as_str()),
+        Term::Album(s) => engine.albums.search(s.as_str()),
+        Term::Artist(s) => engine.artists.search(s.as_str()),
+    }
 }

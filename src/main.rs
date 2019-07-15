@@ -55,7 +55,7 @@ fn main() -> Result<(), failure::Error> {
         load_database(&config).expect("Could not load database")
     };
 
-    let artists_engine =
+    let engine_group =
         create_fuzzy_searcher(&artists).expect("Could not create artist fuzzy search");
 
     // Create the sink for the audio output device
@@ -71,7 +71,7 @@ fn main() -> Result<(), failure::Error> {
     let ui_events = Events::new();
 
     // Create structs to be managed on different threads
-    let mut ui = UI::new(&artists, brx, ttx, ptx, artists_engine);
+    let mut ui = UI::new(&artists, brx, ttx, ptx, engine_group);
     let mut audio = Audio::new(device, trx, btx, prx);
 
     //debug - println!("Number of artists in database: {}", &app.database.len());
@@ -81,9 +81,8 @@ fn main() -> Result<(), failure::Error> {
         loop {
             // Alert the UI thread that there is no song playing
             if audio.sink.empty() {
-                audio.btx.send_timeout(true, Duration::from_millis(250));
-            } else {
-                audio.btx.send_timeout(false, Duration::from_millis(250));
+                if let Ok(()) = audio.btx.send_timeout(true, Duration::from_millis(250)) {}
+            } else if let Ok(()) = audio.btx.send_timeout(false, Duration::from_millis(250)) {
             }
 
             // If the UI thread semds a track from the queue,

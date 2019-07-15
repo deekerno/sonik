@@ -30,12 +30,23 @@ pub struct Album {
 
 #[derive(Clone, Eq, Serialize, Deserialize, Debug)]
 pub struct Artist {
-    pub name: String,
+    pub title: String,
     pub albums: Vec<Album>,
 }
 
 pub trait Record {
     fn name(&self) -> &str;
+}
+
+// Implemented Record trait for box so other types have
+// a known size at compile-time
+impl<T: ?Sized> Record for Box<T>
+where
+    T: Record,
+{
+    fn name(&self) -> &str {
+        (**self).name()
+    }
 }
 
 impl Track {
@@ -139,7 +150,7 @@ impl PartialEq for Track {
 
 impl Record for Track {
     fn name(&self) -> &str {
-        self.title.as_str()
+        &self.title[..]
     }
 }
 
@@ -200,7 +211,7 @@ impl Borrow<String> for Album {
 
 impl Record for Album {
     fn name(&self) -> &str {
-        self.title.as_str()
+        &self.title[..]
     }
 }
 
@@ -209,7 +220,7 @@ impl Artist {
         let album_collection: Vec<Album> = Vec::new();
 
         Ok(Artist {
-            name: artist_name,
+            title: artist_name,
             albums: album_collection,
         })
     }
@@ -232,18 +243,18 @@ impl PartialOrd for Artist {
 
 impl Ord for Artist {
     fn cmp(&self, other: &Artist) -> Ordering {
-        self.name.cmp(&other.name)
+        self.title.cmp(&other.title)
     }
 }
 
 impl PartialEq for Artist {
     fn eq(&self, other: &Artist) -> bool {
-        self.name == other.name && (vec_compare(&self.albums, &other.albums))
+        self.title == other.title && (vec_compare(&self.albums, &other.albums))
     }
 }
 
 impl Record for Artist {
     fn name(&self) -> &str {
-        &self.name[..]
+        &self.title[..]
     }
 }

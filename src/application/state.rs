@@ -3,12 +3,12 @@ use std::io::BufReader;
 
 use crossbeam_channel::{Receiver, Sender};
 use rodio::{Device, Sink};
-use simsearch::SimSearch;
 
 use crate::application::queue::SonikQueue;
 use crate::storage::database::search as db_search;
-use crate::storage::record::{Album, Artist, Track};
-use crate::storage::terms::{SearchQuery, Term};
+use crate::storage::database::{EngineGroup, SearchResult};
+use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::terms::SearchQuery;
 
 // Tabs only need name and ordering information
 pub struct TabsState<'a> {
@@ -157,7 +157,7 @@ impl Audio {
 
     // Notify the UI that there is no audio playing
     pub fn notify(&mut self) {
-        self.btx.send(true);
+        if let Ok(()) = self.btx.send(true) {}
     }
 
     pub fn pause_play(&mut self) {
@@ -183,8 +183,8 @@ pub struct UI<'a> {
     pub tx: Sender<Track>,
     pub ptx: Sender<bool>,
     pub search_input: String,
-    pub fuzzy_searcher: SimSearch<usize>,
-    pub search_results: Vec<Artist>,
+    pub fuzzy_searcher: EngineGroup,
+    pub search_results: Vec<Box<dyn Record>>,
 }
 
 impl<'a> UI<'a> {
@@ -193,7 +193,7 @@ impl<'a> UI<'a> {
         rx: Receiver<bool>,
         tx: Sender<Track>,
         ptx: Sender<bool>,
-        fuzzy_searcher: SimSearch<usize>,
+        fuzzy_searcher: EngineGroup,
     ) -> UI<'a> {
         // Generate initial list states
         let art_col = ListState::new(database);
@@ -227,7 +227,7 @@ impl<'a> UI<'a> {
         if self.lib_cols.current_active == 2 {
             let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
             let audio_copy = track.clone();
-            self.tx.send(audio_copy);
+            if let Ok(()) = self.tx.send(audio_copy) {}
             self.now_playing = track;
         }
         /*else if self.lib_cols.current_active == 1 {
@@ -240,12 +240,12 @@ impl<'a> UI<'a> {
     pub fn play_from_queue(&mut self) {
         let track = self.queue.take();
         let audio_copy = track.clone();
-        self.tx.send(audio_copy);
+        if let Ok(()) = self.tx.send(audio_copy) {}
         self.now_playing = track;
     }
 
     pub fn pause_play(&mut self) {
-        self.ptx.send(true);
+        if let Ok(()) = self.ptx.send(true) {}
     }
 
     pub fn add_to_queue(&mut self) {
@@ -287,7 +287,7 @@ impl<'a> UI<'a> {
     }
 
     pub fn clear_queue(&mut self) {
-        self.ptx.send(false);
+        if let Ok(()) = self.ptx.send(false) {}
         self.queue.clear();
         self.blank_now_play();
     }
@@ -309,16 +309,28 @@ impl<'a> UI<'a> {
         let query_term = SearchQuery::new(self.search_input.as_str());
         self.search_input = String::new();
 
-        match query_term.terms {
-            Term::Any(s) => {}
-            Term::Title(s) => {}
-            Term::Album(s) => {}
-            Term::Artist(s) => {
-                self.search_results = db_search(&self.fuzzy_searcher, s.as_str())
-                    .iter()
-                    .map(|x| self.lib_cols.artists.items[*x].clone())
-                    .collect();
-            }
+        if query_term.is_none() {
+            return;
         }
+
+        self.search_results = match db_search(&self.fuzzy_searcher, query_term.unwrap()) {
+            SearchResult::Artists(r) => r
+                .iter()
+                .map(|x| Box::new(self.lib_cols.artists.items[*x].clone()) as Box<Record>)
+                .collect(),
+            SearchResult::Albums(r) => r
+                .iter()
+                .map(|x| {
+                    Box::new(self.lib_cols.artists.items[x.0].albums[x.1].clone()) as Box<Record>
+                })
+                .collect(),
+            SearchResult::Tracks(r) => r
+                .iter()
+                .map(|x| {
+                    Box::new(self.lib_cols.artists.items[x.0].albums[x.1].tracks[x.2].clone())
+                        as Box<Record>
+                })
+                .collect(),
+        };
     }
 }
