@@ -38,14 +38,20 @@ pub trait Record {
     fn name(&self) -> &str;
 }
 
-// Implemented Record trait for box so other types have
-// a known size at compile-time
-impl<T: ?Sized> Record for Box<T>
-where
-    T: Record,
-{
+#[derive(Clone)]
+pub enum Media {
+    Artist(Artist),
+    Album(Album),
+    Track(Track),
+}
+
+impl Record for Media {
     fn name(&self) -> &str {
-        (**self).name()
+        match self {
+            Media::Artist(a) => &a.name(),
+            Media::Album(a) => &a.name(),
+            Media::Track(t) => &t.name(),
+        }
     }
 }
 

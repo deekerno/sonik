@@ -160,12 +160,8 @@ fn main() -> Result<(), failure::Error> {
                     ui.play_from_queue();
                 }
                 Key::Char(' ') => {
-                    if ui.tabs.index == 1 {
-                        // Add track to queue
-                        ui.add_to_queue();
-                    } else if ui.tabs.index == 2 {
-                        ui.search_input.push(' ');
-                    }
+                    // Add track to queue
+                    ui.add_to_queue();
                 }
                 Key::Char('c') => {
                     if ui.tabs.index == 2 {
@@ -189,11 +185,15 @@ fn main() -> Result<(), failure::Error> {
                 Key::Up => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.on_up();
+                    } else if ui.tabs.index == 2 {
+                        ui.on_up_search();
                     }
                 }
                 Key::Down => {
                     if ui.tabs.index == 1 {
                         ui.lib_cols.on_down();
+                    } else if ui.tabs.index == 2 {
+                        ui.on_down_search();
                     }
                 }
                 Key::Left => {
@@ -207,11 +207,7 @@ fn main() -> Result<(), failure::Error> {
                     }
                 }
                 Key::Char('\n') => {
-                    if ui.tabs.index == 1 {
-                        ui.play_now();
-                    } else if ui.tabs.index == 2 {
-                        ui.search();
-                    }
+                    ui.on_enter();
                 }
                 Key::Char(c) => {
                     if ui.tabs.index == 2 {

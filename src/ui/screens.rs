@@ -195,7 +195,7 @@ where
     RecordList::default()
         .block(Block::default().borders(Borders::ALL))
         .items(&app.search_results)
-        .select(Some(0))
+        .select(Some(app.search_select))
         .style(Style::default().fg(Color::White))
         .highlight_style(
             Style::default()

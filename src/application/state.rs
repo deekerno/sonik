@@ -7,7 +7,7 @@ use rodio::{Device, Sink};
 use crate::application::queue::SonikQueue;
 use crate::storage::database::search as db_search;
 use crate::storage::database::{EngineGroup, SearchResult};
-use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::record::{Album, Artist, Media, Track};
 use crate::storage::terms::SearchQuery;
 
 // Tabs only need name and ordering information
@@ -184,7 +184,8 @@ pub struct UI<'a> {
     pub ptx: Sender<bool>,
     pub search_input: String,
     pub fuzzy_searcher: EngineGroup,
-    pub search_results: Vec<Box<dyn Record>>,
+    pub search_results: Vec<Media>,
+    pub search_select: usize,
 }
 
 impl<'a> UI<'a> {
@@ -220,21 +221,62 @@ impl<'a> UI<'a> {
             search_input: String::new(),
             fuzzy_searcher,
             search_results: Vec::new(),
+            search_select: 0,
         }
     }
 
-    pub fn play_now(&mut self) {
-        if self.lib_cols.current_active == 2 {
-            let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
-            let audio_copy = track.clone();
-            if let Ok(()) = self.tx.send(audio_copy) {}
-            self.now_playing = track;
+    pub fn on_enter(&mut self) {
+        match self.tabs.index {
+            1 => {
+                if self.lib_cols.current_active == 2 {
+                    let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
+                    let audio_copy = track.clone();
+
+                    if let Ok(()) = self.tx.send(audio_copy) {}
+                    self.now_playing = track;
+                } else if self.lib_cols.current_active == 1 {
+                    let mut album =
+                        self.lib_cols.albums.items[self.lib_cols.albums.selected].clone();
+                    let track = album.tracks.remove(0);
+                    let audio_copy = track.clone();
+
+                    if let Ok(()) = self.tx.send(audio_copy) {}
+                    self.now_playing = track;
+
+                    while let Some(t) = album.tracks.pop() {
+                        self.queue.add_to_front(t);
+                    }
+                }
+            }
+            2 => {
+                if self.search_input == "" {
+                    match &self.search_results[self.search_select] {
+                        Media::Artist(_a) => {}
+                        Media::Album(a) => {
+                            let mut album = a.clone();
+                            let track = album.tracks.remove(0);
+                            let audio_copy = track.clone();
+
+                            if let Ok(()) = self.tx.send(audio_copy) {}
+                            self.now_playing = track;
+
+                            while let Some(t) = album.tracks.pop() {
+                                self.queue.add_to_front(t);
+                            }
+                        }
+                        Media::Track(t) => {
+                            let track = t.clone();
+                            let audio_copy = track.clone();
+                            if let Ok(()) = self.tx.send(audio_copy) {}
+                            self.now_playing = track;
+                        }
+                    }
+                } else {
+                    self.search();
+                }
+            }
+            _ => {}
         }
-        /*else if self.lib_cols.current_active == 1 {
-            //
-        } else {
-            //
-        }*/
     }
 
     pub fn play_from_queue(&mut self) {
@@ -249,38 +291,63 @@ impl<'a> UI<'a> {
     }
 
     pub fn add_to_queue(&mut self) {
-        if self.lib_cols.current_active == 2 {
-            let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
-            self.queue.add(track);
-        } else if self.lib_cols.current_active == 1 {
-            for t in &self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks {
-                self.queue.add(t.clone());
-            }
-        } else {
-            for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
-                for t in &a.tracks {
-                    self.queue.add(t.clone());
+        match self.tabs.index {
+            1 => {
+                if self.lib_cols.current_active == 2 {
+                    let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
+                    self.queue.add(track);
+                } else if self.lib_cols.current_active == 1 {
+                    for t in &self.lib_cols.albums.items[self.lib_cols.albums.selected].tracks {
+                        self.queue.add(t.clone());
+                    }
+                } else {
+                    for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
+                        for t in &a.tracks {
+                            self.queue.add(t.clone());
+                        }
+                    }
                 }
             }
+            2 => match &self.search_results[self.search_select] {
+                Media::Artist(a) => {
+                    for album in &a.albums {
+                        for t in &album.tracks {
+                            self.queue.add(t.clone());
+                        }
+                    }
+                }
+                Media::Album(a) => {
+                    for t in &a.tracks {
+                        self.queue.add(t.clone());
+                    }
+                }
+                Media::Track(t) => {
+                    let track = t.clone();
+                    self.queue.add(track);
+                }
+            },
+            _ => {}
         }
     }
 
     pub fn add_to_front(&mut self) {
-        if self.lib_cols.current_active == 2 {
-            let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
-            self.queue.add_to_front(track);
-        } else if self.lib_cols.current_active == 1 {
-            let mut tracklist = self.lib_cols.albums.items[self.lib_cols.albums.selected]
-                .tracks
-                .clone();
-            while let Some(t) = tracklist.pop() {
-                self.queue.add_to_front(t);
-            }
-        } else {
-            for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
-                let mut tracklist = a.tracks.clone();
+        if let 1 = self.tabs.index {
+            if self.lib_cols.current_active == 2 {
+                let track = self.lib_cols.tracks.items[self.lib_cols.tracks.selected].clone();
+                self.queue.add_to_front(track);
+            } else if self.lib_cols.current_active == 1 {
+                let mut tracklist = self.lib_cols.albums.items[self.lib_cols.albums.selected]
+                    .tracks
+                    .clone();
                 while let Some(t) = tracklist.pop() {
                     self.queue.add_to_front(t);
+                }
+            } else {
+                for a in &self.lib_cols.artists.items[self.lib_cols.artists.selected].albums {
+                    let mut tracklist = a.tracks.clone();
+                    while let Some(t) = tracklist.pop() {
+                        self.queue.add_to_front(t);
+                    }
                 }
             }
         }
@@ -316,21 +383,30 @@ impl<'a> UI<'a> {
         self.search_results = match db_search(&self.fuzzy_searcher, query_term.unwrap()) {
             SearchResult::Artists(r) => r
                 .iter()
-                .map(|x| Box::new(self.lib_cols.artists.items[*x].clone()) as Box<Record>)
+                .map(|x| Media::Artist(self.lib_cols.artists.items[*x].clone()))
                 .collect(),
             SearchResult::Albums(r) => r
                 .iter()
-                .map(|x| {
-                    Box::new(self.lib_cols.artists.items[x.0].albums[x.1].clone()) as Box<Record>
-                })
+                .map(|x| Media::Album(self.lib_cols.artists.items[x.0].albums[x.1].clone()))
                 .collect(),
             SearchResult::Tracks(r) => r
                 .iter()
                 .map(|x| {
-                    Box::new(self.lib_cols.artists.items[x.0].albums[x.1].tracks[x.2].clone())
-                        as Box<Record>
+                    Media::Track(self.lib_cols.artists.items[x.0].albums[x.1].tracks[x.2].clone())
                 })
                 .collect(),
         };
+    }
+
+    pub fn on_up_search(&mut self) {
+        if self.search_select > 0 {
+            self.search_select -= 1;
+        } else {
+            self.search_select = self.search_results.len() - 1;
+        }
+    }
+
+    pub fn on_down_search(&mut self) {
+        self.search_select = (self.search_select + 1) % self.search_results.len();
     }
 }
