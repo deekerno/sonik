@@ -4,7 +4,7 @@ use chrono::Local;
 use tui::backend::Backend;
 use tui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use tui::style::{Color, Modifier, Style};
-use tui::widgets::{Block, Borders, Paragraph, Row, Table, Tabs, Text, Widget};
+use tui::widgets::{Block, Borders, List, Paragraph, Tabs, Text, Widget};
 use tui::Frame;
 
 use crate::application::state::UI;
@@ -51,22 +51,55 @@ where
     B: Backend,
 {
     let chunks = Layout::default()
-        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Horizontal)
+        .margin(1)
+        .constraints(
+            [
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
+                Constraint::Ratio(1, 3),
+            ]
+            .as_ref(),
+        )
         .split(area);
-    let row_style = Style::default().fg(Color::White);
-    let header = ["Title", "Artist", "Album"].iter();
-    let songs = app.queue.tracks.iter().map(|track| {
-        Row::StyledData(
-            vec![&track.title, &track.artist, &track.album].into_iter(),
-            row_style,
+
+    let artists = app.queue.tracks.iter().map(|track| {
+        Text::styled(
+            track.artist.to_string(),
+            Style::default().fg(Color::LightGreen),
         )
     });
 
-    Table::new(header, songs)
-        .block(Block::default().borders(Borders::ALL))
-        .header_style(Style::default().fg(Color::Yellow))
-        .widths(&[60, 30, 40])
+    let titles = app.queue.tracks.iter().map(|track| {
+        Text::styled(
+            track.title.to_string(),
+            Style::default().fg(Color::LightBlue),
+        )
+    });
+
+    let albums = app.queue.tracks.iter().map(|track| {
+        Text::styled(
+            track.album.to_string(),
+            Style::default().fg(Color::LightRed),
+        )
+    });
+
+    Block::default()
+        .borders(Borders::ALL)
+        .title("up next")
+        .render(f, area);
+
+    List::new(titles)
+        .block(Block::default())
         .render(f, chunks[0]);
+
+    List::new(artists)
+        .block(Block::default())
+        .render(f, chunks[1]);
+
+    List::new(albums)
+        .block(Block::default())
+        .render(f, chunks[2]);
 }
 
 pub fn draw_library<B>(f: &mut Frame<B>, app: &UI, area: Rect)
@@ -165,7 +198,10 @@ where
     ];
 
     // Enclosing border
-    Block::default().borders(Borders::ALL).render(f, area);
+    Block::default()
+        .borders(Borders::ALL)
+        .title("query")
+        .render(f, area);
 
     // Term explanations
     Paragraph::new(text.iter())
@@ -193,7 +229,7 @@ where
         .split(area);
 
     RecordList::default()
-        .block(Block::default().borders(Borders::ALL))
+        .block(Block::default().borders(Borders::ALL).title("results"))
         .items(&app.search_results)
         .select(Some(app.search_select))
         .style(Style::default().fg(Color::White))
@@ -275,7 +311,6 @@ fn draw_status<B>(f: &mut Frame<B>, area: Rect)
 where
     B: Backend,
 {
-    // This part doesn't work right now, but will soon
     let text = [
         Text::raw(Local::now().date().format("%A, %B %d, %Y").to_string()),
         Text::raw(" | "),
@@ -296,4 +331,80 @@ where
     Paragraph::new(text.iter())
         .alignment(Alignment::Center)
         .render(f, chunks[0]);
+}
+
+pub fn draw_stats<B>(f: &mut Frame<B>, app: &UI, area: Rect)
+where
+    B: Backend,
+{
+    let hours = app.queue.total_time / 3_600_000;
+    let mins = (app.queue.total_time - (3_600_000 * hours)) / 60000;
+    let secs = (app.queue.total_time - (3_600_000 * hours) - (mins * 60000)) / 1000;
+
+    let total_hours = app.stats.total_time / 3_600_000;
+    let total_mins = (app.stats.total_time - (3_600_000 * total_hours)) / 60000;
+    let total_secs =
+        (app.stats.total_time - (3_600_000 * total_hours) - (total_mins * 60000)) / 1000;
+
+    let queue_info = [
+        Text::raw(format!("remaining: {} tracks", app.queue.tracks.len())),
+        Text::raw(" | "),
+        Text::raw(format!(
+            "{} hour(s), {} min(s), {} sec(s)",
+            hours, mins, secs
+        )),
+    ];
+
+    let library_info = [
+        Text::raw(format!("{} artists", app.stats.artists)),
+        Text::raw(" | "),
+        Text::raw(format!("{} albums", app.stats.albums)),
+        Text::raw(" | "),
+        Text::raw(format!("{} tracks", app.stats.tracks)),
+        Text::raw(" | "),
+        Text::raw(format!(
+            "{} hour(s), {} min(s), {} sec(s)",
+            total_hours, total_mins, total_secs
+        )),
+    ];
+
+    let search_blurb = [Text::raw("Enter search query")];
+
+    let search_info = [Text::raw(format!("{} results", app.search_results.len()))];
+
+    let chunks = Layout::default()
+        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Vertical)
+        .margin(1)
+        .split(area);
+
+    Block::default()
+        .borders(Borders::ALL)
+        .title("stats")
+        .render(f, area);
+
+    match app.tabs.index {
+        0 => {
+            Paragraph::new(queue_info.iter())
+                .alignment(Alignment::Center)
+                .render(f, chunks[0]);
+        }
+        1 => {
+            Paragraph::new(library_info.iter())
+                .alignment(Alignment::Center)
+                .render(f, chunks[0]);
+        }
+        2 => {
+            if !app.search_results.is_empty() {
+                Paragraph::new(search_info.iter())
+                    .alignment(Alignment::Center)
+                    .render(f, chunks[0]);
+            } else {
+                Paragraph::new(search_blurb.iter())
+                    .alignment(Alignment::Center)
+                    .render(f, chunks[0]);
+            }
+        }
+        _ => {}
+    }
 }

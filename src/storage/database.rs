@@ -1,14 +1,12 @@
 use std::fs;
 use std::io::{BufReader, BufWriter};
-use std::path::Path;
 
 use bincode::{deserialize_from, serialize_into};
-use hashbrown::HashMap;
 use ignore::{DirEntry, Walk};
 use simsearch::SimSearch;
 
 use crate::application::config::Config;
-use crate::storage::record::{Album, Artist, Record, Track};
+use crate::storage::record::{Album, Artist, Stats, Track};
 use crate::storage::terms::{SearchQuery, Term};
 
 pub struct EngineGroup {
@@ -62,9 +60,10 @@ fn is_music(entry: &DirEntry) -> bool {
     }
 }
 
-pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
+pub fn create_and_load_database(config: &Config) -> Result<(Vec<Artist>, Stats), ()> {
     // create vector of artists
     let mut artists: Vec<Artist> = Vec::new();
+    let mut stats = Stats::new().unwrap();
 
     // Walk through the music directory and add paths for each track
     for result in Walk::new(&config.music_folder) {
@@ -72,7 +71,7 @@ pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
             if is_music(&entry) {
                 let track = Track::new(entry.into_path());
                 if let Ok(t) = track {
-                    add_to_database_helper(t, &mut artists)
+                    add_to_database_helper(t, &mut artists, &mut stats)
                 }
             }
         }
@@ -82,25 +81,34 @@ pub fn create_and_load_database(config: &Config) -> Result<Vec<Artist>, ()> {
         fs::File::create(&config.database_path).expect("Could not write to database path"),
     );
 
+    let mut g = BufWriter::new(
+        fs::File::create(&config.stats_path).expect("Could not write to stats path"),
+    );
+
     // Sort for easy finding in the UI
     artists.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()));
 
     serialize_into(&mut f, &artists).expect("Could not serialize database to file");
+    serialize_into(&mut g, &stats).expect("Could not serialize stats to file");
 
-    Ok(artists)
+    Ok((artists, stats))
 }
 
-pub fn load_database(config: &Config) -> Result<Vec<Artist>, ()> {
+pub fn load_database(config: &Config) -> Result<(Vec<Artist>, Stats), ()> {
     let mut library_reader = BufReader::new(
         fs::File::open(&config.database_path).expect("Could not open database file"),
     );
 
-    let artists = deserialize_from(&mut library_reader).expect("Could not deserialize");
+    let mut stats_reader =
+        BufReader::new(fs::File::open(&config.stats_path).expect("Could not open database file"));
 
-    Ok(artists)
+    let artists = deserialize_from(&mut library_reader).expect("Could not deserialize");
+    let stats = deserialize_from(&mut stats_reader).expect("Could not deserialize");
+
+    Ok((artists, stats))
 }
 
-fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
+fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>, stats: &mut Stats) {
     // Copy the string information out of the track and pass it
     // to add_to_database along with the actual track struct
 
@@ -108,7 +116,7 @@ fn add_to_database_helper(t: Track, artists: &mut Vec<Artist>) {
     let album_title = t.album.clone();
     let album_year = t.year;
 
-    add_to_database(&artist_name, &album_title, album_year, t, artists);
+    add_to_database(&artist_name, &album_title, album_year, t, artists, stats);
 }
 
 fn add_to_database(
@@ -117,7 +125,11 @@ fn add_to_database(
     album_year: i32,
     t: Track,
     artists: &mut Vec<Artist>,
+    stats: &mut Stats,
 ) {
+    stats.tracks += 1;
+    stats.total_time += t.duration;
+
     // Strings should be copies of information in track
     // Use them to add/check artists/albums and add track
 
@@ -142,6 +154,7 @@ fn add_to_database(
                     //debug - println!("Created new album: {}", album_title);
                     album.tracks.push(t);
                     if let Ok(()) = artists[idx].add_album(album) {}
+                    stats.albums += 1;
                 }
             }
         }
@@ -149,6 +162,7 @@ fn add_to_database(
         // If no artist matches that name, then create the artist and album, and add track
         None => {
             let mut artist = Artist::new(artist_name.to_string()).unwrap();
+            stats.artists += 1;
             //debug - println!("Created new artist: {}", &artist.name);
 
             let mut album =
@@ -156,37 +170,10 @@ fn add_to_database(
             //debug - println!("Created new album: {}", &album.title);
             album.tracks.push(t);
             if let Ok(()) = artist.add_album(album) {}
+            stats.albums += 1;
             artists.push(artist);
         }
     }
-}
-
-pub fn create_search_map<R: Record>(
-    records: &[R],
-    save_path: &Path,
-) -> Result<HashMap<String, usize>, ()> {
-    let mut search_map = HashMap::new();
-
-    for (i, record) in (&records).iter().enumerate() {
-        let name = record.name();
-        search_map.insert(name.to_lowercase(), i);
-    }
-
-    let mut map_file =
-        BufWriter::new(fs::File::create(save_path).expect("Could not write to map path"));
-
-    serialize_into(&mut map_file, &search_map).expect("Could not serialize map to file");
-
-    Ok(search_map)
-}
-
-pub fn load_search_map(file_path: &Path) -> Result<HashMap<String, usize>, ()> {
-    let mut map_reader =
-        BufReader::new(fs::File::open(&file_path).expect("Could not open map file"));
-
-    let search_map = deserialize_from(&mut map_reader).expect("Could not deserialize");
-
-    Ok(search_map)
 }
 
 pub fn create_fuzzy_searcher(records: &[Artist]) -> Result<EngineGroup, ()> {

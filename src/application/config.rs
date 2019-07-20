@@ -10,7 +10,7 @@ pub struct Config {
     pub music_folder: String,
     pub data_folder: String,
     pub database_path: String,
-    pub art_map_path: String,
+    pub stats_path: String,
 }
 
 impl Config {
@@ -26,15 +26,15 @@ impl Config {
         database_path.push(".sonik");
         database_path.push("library.db");
 
-        let mut art_map_path = home_dir().unwrap();
-        art_map_path.push(".sonik");
-        art_map_path.push("artists.map");
+        let mut stats_path = home_dir().unwrap();
+        stats_path.push(".sonik");
+        stats_path.push("library.stats");
 
         Config {
             music_folder: music_location.to_str().unwrap().to_owned(),
             data_folder: data_folder.to_str().unwrap().to_owned(),
             database_path: database_path.to_str().unwrap().to_owned(),
-            art_map_path: art_map_path.to_str().unwrap().to_owned(),
+            stats_path: stats_path.to_str().unwrap().to_owned(),
         }
     }
 
@@ -46,15 +46,15 @@ impl Config {
         database_path.push(".sonik");
         database_path.push("library.db");
 
-        let mut art_map_path = home_dir().unwrap();
-        art_map_path.push(".sonik");
-        art_map_path.push("artists.map");
+        let mut stats_path = home_dir().unwrap();
+        stats_path.push(".sonik");
+        stats_path.push("library.stats");
 
         let config = Config {
             music_folder: music_location.to_string(),
             data_folder: data_folder.to_str().unwrap().to_owned(),
             database_path: database_path.to_str().unwrap().to_owned(),
-            art_map_path: art_map_path.to_str().unwrap().to_owned(),
+            stats_path: stats_path.to_str().unwrap().to_owned(),
         };
 
         let mut config_path: PathBuf = home_dir().unwrap();

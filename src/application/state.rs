@@ -7,7 +7,7 @@ use rodio::{Device, Sink};
 use crate::application::queue::SonikQueue;
 use crate::storage::database::search as db_search;
 use crate::storage::database::{EngineGroup, SearchResult};
-use crate::storage::record::{Album, Artist, Media, Track};
+use crate::storage::record::{Album, Artist, Media, Stats, Track};
 use crate::storage::terms::SearchQuery;
 
 // Tabs only need name and ordering information
@@ -186,6 +186,7 @@ pub struct UI<'a> {
     pub fuzzy_searcher: EngineGroup,
     pub search_results: Vec<Media>,
     pub search_select: usize,
+    pub stats: Stats,
 }
 
 impl<'a> UI<'a> {
@@ -195,6 +196,7 @@ impl<'a> UI<'a> {
         tx: Sender<Track>,
         ptx: Sender<bool>,
         fuzzy_searcher: EngineGroup,
+        stats: Stats,
     ) -> UI<'a> {
         // Generate initial list states
         let art_col = ListState::new(database);
@@ -222,6 +224,7 @@ impl<'a> UI<'a> {
             fuzzy_searcher,
             search_results: Vec::new(),
             search_select: 0,
+            stats,
         }
     }
 
@@ -249,7 +252,8 @@ impl<'a> UI<'a> {
                 }
             }
             2 => {
-                if self.search_input == "" {
+                if self.search_input == "" && self.search_results.is_empty() {
+                } else if self.search_input == "" {
                     match &self.search_results[self.search_select] {
                         Media::Artist(_a) => {}
                         Media::Album(a) => {

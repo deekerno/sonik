@@ -34,6 +34,14 @@ pub struct Artist {
     pub albums: Vec<Album>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Stats {
+    pub artists: u32,
+    pub albums: u32,
+    pub tracks: u32,
+    pub total_time: u32,
+}
+
 pub trait Record {
     fn name(&self) -> &str;
 }
@@ -262,5 +270,16 @@ impl PartialEq for Artist {
 impl Record for Artist {
     fn name(&self) -> &str {
         &self.title[..]
+    }
+}
+
+impl Stats {
+    pub fn new() -> Result<Stats, ()> {
+        Ok(Stats {
+            artists: 0,
+            albums: 0,
+            tracks: 0,
+            total_time: 0,
+        })
     }
 }

@@ -8,8 +8,6 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
-//use log::*;
-//use simplelog::*;
 use clap::{App, Arg};
 use crossbeam_channel as channel;
 use termion::event::Key;
@@ -27,7 +25,7 @@ use crate::util::event::{Event, Events};
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("sonik")
-        .version("0.3")
+        .version("0.9")
         .author("Alexander Decurnou. <ad@alx.xyz>")
         .about("A console music player")
         .arg(
@@ -49,7 +47,7 @@ fn main() -> Result<(), failure::Error> {
 
     println!("Loading database...");
 
-    let artists = if !Path::new(&config.database_path).exists() {
+    let (artists, stats) = if !Path::new(&config.database_path).exists() {
         create_and_load_database(&config).expect("Could not create database")
     } else {
         load_database(&config).expect("Could not load database")
@@ -71,7 +69,7 @@ fn main() -> Result<(), failure::Error> {
     let ui_events = Events::new();
 
     // Create structs to be managed on different threads
-    let mut ui = UI::new(&artists, brx, ttx, ptx, engine_group);
+    let mut ui = UI::new(&artists, brx, ttx, ptx, engine_group, stats);
     let mut audio = Audio::new(device, trx, btx, prx);
 
     //debug - println!("Number of artists in database: {}", &app.database.len());
@@ -111,7 +109,14 @@ fn main() -> Result<(), failure::Error> {
             let size = f.size();
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(5), Constraint::Percentage(95)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Percentage(5),
+                        Constraint::Percentage(91),
+                        Constraint::Percentage(4),
+                    ]
+                    .as_ref(),
+                )
                 .split(f.size());
             Block::default()
                 .style(Style::default().bg(Color::Black))
@@ -123,6 +128,7 @@ fn main() -> Result<(), failure::Error> {
                 2 => ui::screens::draw_search(&mut f, &ui, chunks[1]),
                 _ => {}
             }
+            ui::screens::draw_stats(&mut f, &ui, chunks[2]);
         })?;
 
         // Capture keypresses
@@ -160,8 +166,16 @@ fn main() -> Result<(), failure::Error> {
                     ui.play_from_queue();
                 }
                 Key::Char(' ') => {
-                    // Add track to queue
-                    ui.add_to_queue();
+                    if ui.tabs.index == 2 {
+                        if !ui.search_results.is_empty() {
+                            ui.add_to_queue();
+                        } else {
+                            ui.search_input.push(' ');
+                        }
+                    } else {
+                        // Add track to queue
+                        ui.add_to_queue();
+                    }
                 }
                 Key::Char('c') => {
                     if ui.tabs.index == 2 {
