@@ -36,6 +36,12 @@ fn main() -> Result<(), failure::Error> {
                 .help("Create the database using files from this location")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("rebuild")
+                .short("r")
+                .long("rebuild")
+                .help("Rebuild the library using location from config file"),
+        )
         .get_matches();
 
     println!("Loading configuration...");
@@ -49,6 +55,8 @@ fn main() -> Result<(), failure::Error> {
 
     let (artists, stats) = if !Path::new(&config.database_path).exists() {
         create_and_load_database(&config).expect("Could not create database")
+    } else if matches.is_present("rebuild") {
+        rebuild_database(&config).expect("Could not rebuild database")
     } else {
         load_database(&config).expect("Could not load database")
     };
@@ -71,8 +79,6 @@ fn main() -> Result<(), failure::Error> {
     // Create structs to be managed on different threads
     let mut ui = UI::new(&artists, brx, ttx, ptx, engine_group, stats);
     let mut audio = Audio::new(device, trx, btx, prx);
-
-    //debug - println!("Number of artists in database: {}", &app.database.len());
 
     // All audio-related bits are sent to their own thread
     thread::spawn(move || {

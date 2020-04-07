@@ -18,7 +18,7 @@ Feel free to download the latest release and run `./sonik`. Or clone the reposit
 run`. If the command is run with no flags, then the program will check your user directory for the `.sonik
 ` folder. If absent, the program will create the folder and write a default
 configuration file (`config.toml`) that defines the music folder location at
-`[home_dir]/Music`. You can specify the media location by using the `-d` flag.  It will create and write the database to the program folder as `library.db`, and will then launch the interface.
+`[home_dir]/Music`. You can specify the media location by using the `-d` flag.  It will create and write the database to the program folder as `library.db`, and will then launch the interface. The `-r` flag will trigger a rebuild of the database.
 
 ## Flags
 - -d [FOLDER]: specifies the location that will be analyzed for database

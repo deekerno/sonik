@@ -1,6 +1,6 @@
 [package]
 name = "sonik"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Alexander Decurnou <ad@alx.xyz>"]
 edition = "2018"
 
@@ -23,5 +23,5 @@ simplelog = "*"
 simsearch = "0.1"
 termion = "1.5"
 toml = "*"
-tui = "0.6.2"
+tui = "0.8"
 unicode-width = "*"

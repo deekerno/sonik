@@ -50,13 +50,13 @@ fn is_music(entry: &DirEntry) -> bool {
     // If the filename isn't a suitable audio format, return false
     if let Some(extension) = entry.path().extension() {
         match extension.to_str() {
-            Some("mp3") => return true,
-            Some("flac") => return true,
-            Some("ogg") => return true,
-            _ => return false,
-        };
+            Some("mp3") => true,
+            Some("flac") => true,
+            Some("ogg") => true,
+            _ => false,
+        }
     } else {
-        return false;
+        false
     }
 }
 
@@ -69,9 +69,9 @@ pub fn create_and_load_database(config: &Config) -> Result<(Vec<Artist>, Stats),
     for result in Walk::new(&config.music_folder) {
         if let Ok(entry) = result {
             if is_music(&entry) {
-                let track = Track::new(entry.into_path());
-                if let Ok(t) = track {
-                    add_to_database_helper(t, &mut artists, &mut stats)
+                match Track::new(entry.path().to_path_buf()) {
+                    Ok(t) => add_to_database_helper(t, &mut artists, &mut stats),
+                    _ => println!("{}", entry.path().to_str().unwrap()),
                 }
             }
         }
@@ -104,6 +104,14 @@ pub fn load_database(config: &Config) -> Result<(Vec<Artist>, Stats), ()> {
 
     let artists = deserialize_from(&mut library_reader).expect("Could not deserialize");
     let stats = deserialize_from(&mut stats_reader).expect("Could not deserialize");
+
+    Ok((artists, stats))
+}
+
+pub fn rebuild_database(config: &Config) -> Result<(Vec<Artist>, Stats), ()> {
+    fs::remove_file(&config.database_path).expect("Could not delete database");
+
+    let (artists, stats) = create_and_load_database(config).expect("Could not create database");
 
     Ok((artists, stats))
 }
